@@ -4,6 +4,8 @@ import (
 	"log"
 	"os"
 
+	"github.com/Narutchai01/solpay-core-service/internal/config"
+	"github.com/Narutchai01/solpay-core-service/internal/routes"
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
 )
@@ -19,6 +21,13 @@ func main() {
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("Hello, World!")
 	})
+
+	db, err := config.ConnectDB()
+	if err != nil {
+		log.Fatalf("Error connecting to database: %v", err)
+	}
+
+	routes.RoutesConfig(app, db)
 
 	port := os.Getenv("PORT")
 	if port == "" {
