@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   database:
     container_name: solpayg-postgres
@@ -18,9 +20,11 @@ services:
 
   solpay-core-service:
     container_name: solpay-core-service
+    restart: on-failure
     build:
       context: .
       dockerfile: dockerfile
+      target: dev
     ports:
       - "${APP_PORT}:${APP_PORT}"
     depends_on:
@@ -33,3 +37,19 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: ${DB_NAME}
       APP_PORT: ${APP_PORT}
+    develop:
+      watch:
+        - action: sync
+          path: ./cmd
+          target: /app/cmd
+        - action: sync
+          path: ./internal
+          target: /app/internal
+        - action: sync
+          path: ./config # (ถ้ามี)
+          target: /app/config
+
+        - action: rebuild
+          path: ./go.mod
+        - action: rebuild
+          path: ./go.sum
