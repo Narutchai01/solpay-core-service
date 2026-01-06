@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"time"
 
@@ -34,11 +35,13 @@ func ConnectDB() (*gorm.DB, error) {
 		Logger: newLogger,
 	})
 
-	db.AutoMigrate(entities.ExampleEntity{})
-
 	if err != nil {
 		return nil, err
 	}
+
+	slog.Info("Database connected successfully")
+
+	db.AutoMigrate(entities.ExampleEntity{})
 
 	return db, nil
 

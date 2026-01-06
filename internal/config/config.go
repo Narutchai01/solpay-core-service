@@ -12,6 +12,7 @@ type Config struct {
 	DBPassword string
 	DBName     string
 	APPPort    string
+	TimeZone   string
 }
 
 func GetEnv(key string, fallback ...string) string {
@@ -34,5 +35,6 @@ func LoadConfig() *Config {
 		DBPassword: GetEnv("DB_PASSWORD"),
 		DBName:     GetEnv("DB_NAME"),
 		APPPort:    GetEnv("APP_PORT", "8080"),
+		TimeZone:   GetEnv("Timezone", "Asia/Bangkok"),
 	}
 }

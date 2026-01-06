@@ -7,6 +7,7 @@ import (
 	"github.com/Narutchai01/solpay-core-service/internal/db"
 	"github.com/Narutchai01/solpay-core-service/internal/routes"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/joho/godotenv"
 )
 
@@ -19,6 +20,11 @@ func main() {
 	cfg := config.LoadConfig()
 
 	app := fiber.New()
+
+	app.Use(logger.New(logger.Config{
+		// Format:   "[${time}] ${status} - ${latency} ${method} ${path}\n",
+		TimeZone: cfg.TimeZone,
+	}))
 
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("Hello, World!")
