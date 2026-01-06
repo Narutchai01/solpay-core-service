@@ -1,0 +1,38 @@
+package config
+
+import (
+	"fmt"
+	"os"
+)
+
+type Config struct {
+	DBHost     string
+	DBPort     string
+	DBUser     string
+	DBPassword string
+	DBName     string
+	APPPort    string
+}
+
+func GetEnv(key string, fallback ...string) string {
+	val := os.Getenv(key)
+	if val != "" {
+		return val
+	}
+	if len(fallback) > 0 {
+		return fallback[0]
+	}
+	msg := fmt.Sprintf("Environment variable %s is required but not set", key)
+	panic(msg)
+}
+
+func LoadConfig() *Config {
+	return &Config{
+		DBHost:     GetEnv("DB_HOST"),
+		DBPort:     GetEnv("DB_PORT"),
+		DBUser:     GetEnv("DB_USER"),
+		DBPassword: GetEnv("DB_PASSWORD"),
+		DBName:     GetEnv("DB_NAME"),
+		APPPort:    GetEnv("APP_PORT", "8080"),
+	}
+}

@@ -2,9 +2,9 @@ package main
 
 import (
 	"log"
-	"os"
 
 	"github.com/Narutchai01/solpay-core-service/internal/config"
+	"github.com/Narutchai01/solpay-core-service/internal/db"
 	"github.com/Narutchai01/solpay-core-service/internal/routes"
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
@@ -13,8 +13,10 @@ import (
 func main() {
 	err := godotenv.Load()
 	if err != nil {
+
 		log.Fatal("Error loading .env file")
 	}
+	cfg := config.LoadConfig()
 
 	app := fiber.New()
 
@@ -22,19 +24,14 @@ func main() {
 		return c.SendString("Hello, World!")
 	})
 
-	db, err := config.ConnectDB()
+	db, err := db.ConnectDB()
 	if err != nil {
 		log.Fatalf("Error connecting to database: %v", err)
 	}
 
 	routes.RoutesConfig(app, db)
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		panic("PORT environment variable is not set")
-	}
-
-	if err := app.Listen(":" + port); err != nil {
+	if err := app.Listen(":" + cfg.APPPort); err != nil {
 		log.Fatalf("Error starting the server: %v", err)
 	}
 }
