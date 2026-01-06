@@ -8,15 +8,10 @@ import (
 	"github.com/Narutchai01/solpay-core-service/internal/routes"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/joho/godotenv"
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
 
-		log.Fatal("Error loading .env file")
-	}
 	cfg := config.LoadConfig()
 
 	app := fiber.New()
