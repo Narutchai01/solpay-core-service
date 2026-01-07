@@ -1,3 +1,6 @@
 .env
 /databasepg
 /tmp
+
+.Ds
+internal/core/.DS_Store
