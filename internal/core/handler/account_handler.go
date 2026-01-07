@@ -28,23 +28,29 @@ func NewAccountHandler(accountService services.AccountService) AccountHandler {
 	}
 }
 
+// NOTE: CreateAccountHandler handles the creation of a new account
 func (h *accountHandler) CreateAccountHandler(c *fiber.Ctx) error {
+	// NOTE: Parse and validate the request body
 	var req request.CreateAccountRequest
+	// NOTE: Handle parsing and validation errors
 	if err := c.BodyParser(&req); err != nil {
 		msg := utils.FormatValidationError(err)
 		return utils.HandleError(c, entities.NewAppError(entities.ErrTypeBadRequest, msg, err))
 	}
 
+	// NOTE: Validate the request struct
 	if err := h.validate.Struct(&req); err != nil {
 		msg := utils.FormatValidationError(err)
 		return utils.HandleError(c, entities.NewAppError(entities.ErrTypeBadRequest, msg, err))
 	}
 
+	// NOTE: Call the service to create the account
 	account, err := h.accountService.CreateAccount(req)
 	if err != nil {
 		return utils.HandleError(c, err)
 	}
 
+	// NOTE: define success message
 	msg := fmt.Sprintf("Account %d created successfully", account.ID)
 
 	slog.Info(msg)
