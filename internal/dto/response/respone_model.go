@@ -7,7 +7,7 @@ type ResponseModel struct {
 	Error   interface{} `json:"error"`
 }
 
-func NewResponseModel(code int, message string, data interface{}, err interface{}) *ResponseModel {
+func FormaterResponseDTO(code int, message string, data interface{}, err interface{}) *ResponseModel {
 	return &ResponseModel{
 		Code:    code,
 		Message: message,

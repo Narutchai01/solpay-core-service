@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Narutchai01/solpay-core-service/internal/config"
-	"github.com/Narutchai01/solpay-core-service/internal/models/response"
+	"github.com/Narutchai01/solpay-core-service/internal/utils"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -20,5 +20,5 @@ func (h *HealthHandler) HandleHealthCheck(c *fiber.Ctx) error {
 
 	msg := fmt.Sprintf("Service is running. Environment: %s, on port %s", cfg.Environment, cfg.APPPort)
 
-	return c.Status(fiber.StatusOK).JSON(response.NewResponseModel(fiber.StatusOK, msg, nil, nil))
+	return utils.HandleSuccess(c, fiber.StatusOK, msg, nil)
 }

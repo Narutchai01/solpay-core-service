@@ -14,5 +14,6 @@ func AccountRoute(route fiber.Router, db *gorm.DB, validate *validator.Validate)
 	accountService := services.NewAccountService(accountRepo)
 	accountHandler := handler.NewAccountHandler(accountService)
 
+	route.Get("/", accountHandler.GetAccountsHandler)
 	route.Post("/", accountHandler.CreateAccountHandler)
 }

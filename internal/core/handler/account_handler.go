@@ -5,8 +5,8 @@ import (
 	"log/slog"
 
 	"github.com/Narutchai01/solpay-core-service/internal/core/services"
+	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
-	"github.com/Narutchai01/solpay-core-service/internal/models/request"
 	"github.com/Narutchai01/solpay-core-service/internal/utils"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
@@ -14,6 +14,7 @@ import (
 
 type AccountHandler interface {
 	CreateAccountHandler(c *fiber.Ctx) error
+	GetAccountsHandler(c *fiber.Ctx) error
 }
 
 type accountHandler struct {
@@ -55,4 +56,18 @@ func (h *accountHandler) CreateAccountHandler(c *fiber.Ctx) error {
 
 	slog.Info(msg)
 	return utils.HandleSuccess(c, fiber.StatusCreated, msg, account)
+}
+
+func (h *accountHandler) GetAccountsHandler(c *fiber.Ctx) error {
+	// NOTE: Call the service to get accounts
+	accounts, err := h.accountService.GetAccounts(1, 10)
+	if err != nil {
+		return utils.HandleError(c, err)
+	}
+
+	// NOTE: define success message
+	msg := fmt.Sprintf("Retrieved %d accounts successfully", len(accounts))
+
+	slog.Info(msg)
+	return utils.HandleSuccess(c, fiber.StatusOK, msg, accounts)
 }

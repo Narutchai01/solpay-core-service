@@ -6,4 +6,5 @@ import (
 
 type AccountRepository interface {
 	CreateAccount(data entities.AccountEntity) (entities.AccountEntity, error)
+	GetAccounts(page int, limit int) ([]entities.AccountEntity, error)
 }

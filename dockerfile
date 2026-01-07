@@ -15,7 +15,7 @@ FROM base AS dev
 # Copy โค้ดทั้งหมดเข้าไป
 COPY . .
 # สั่งรัน Air เป็นหลัก
-CMD ["air", "-c", ".air.toml"]
+CMD ["go" , "run" , "cmd/main.go"] 
 
 # --- 3. Builder Stage (เตรียม Build สำหรับ Prod) ---
 FROM base AS builder

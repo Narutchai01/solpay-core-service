@@ -28,3 +28,13 @@ func (r *GormAccountRepository) CreateAccount(data entities.AccountEntity) (enti
 	}
 	return data, nil
 }
+
+func (r *GormAccountRepository) GetAccounts(page int, limit int) ([]entities.AccountEntity, error) {
+	var accounts []entities.AccountEntity
+	offset := (page - 1) * limit
+
+	if err := r.db.Limit(limit).Offset(offset).Find(&accounts).Error; err != nil {
+		return nil, err
+	}
+	return accounts, nil
+}

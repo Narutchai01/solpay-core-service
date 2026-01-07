@@ -4,8 +4,8 @@ import (
 	"errors"
 	"log/slog"
 
+	"github.com/Narutchai01/solpay-core-service/internal/dto/response"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
-	"github.com/Narutchai01/solpay-core-service/internal/models/response"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -35,5 +35,5 @@ func HandleError(c *fiber.Ctx, err error) error {
 		slog.Error("Unknown Error", "error", err)
 	}
 
-	return c.Status(code).JSON(response.NewResponseModel(code, msg, nil, msg))
+	return c.Status(code).JSON(response.FormaterResponseDTO(code, msg, nil, msg))
 }
