@@ -2,8 +2,9 @@ package services
 
 import (
 	"errors"
+	"fmt"
 
-	portRepo "github.com/Narutchai01/solpay-core-service/internal/core/ports/repositories"
+	"github.com/Narutchai01/solpay-core-service/internal/core/ports/repositories"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
 	"github.com/Narutchai01/solpay-core-service/internal/models/request"
 	"github.com/Narutchai01/solpay-core-service/internal/utils"
@@ -16,11 +17,11 @@ type AccountService interface {
 
 // Note: Implement the AccountService interface
 type accountService struct {
-	accountRepo portRepo.AccountRepository
+	accountRepo repositories.AccountRepository
 }
 
 // Note: Constructor function for AccountService
-func NewAccountService(accountRepo portRepo.AccountRepository) AccountService {
+func NewAccountService(accountRepo repositories.AccountRepository) AccountService {
 	return &accountService{
 		accountRepo: accountRepo,
 	}
@@ -39,7 +40,8 @@ func (s *accountService) CreateAccount(req request.CreateAccountRequest) (entiti
 		// Note: Handle specific error cases
 		if errors.Is(err, entities.ErrConflict) {
 			// NOTE : if account already exists
-			return entities.AccountEntity{}, entities.NewAppError(entities.ErrTypeConflict, "Account already exists", err)
+			errMessage := fmt.Sprintf("Account with public address %s already exists", req.PublicAddress)
+			return entities.AccountEntity{}, entities.NewAppError(entities.ErrTypeConflict, errMessage, err)
 		}
 		msg := utils.FormatValidationError(err)
 		// Generic error handling
