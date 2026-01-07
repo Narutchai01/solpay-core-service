@@ -1,15 +1,15 @@
 package handler
 
 import (
-	service "github.com/Narutchai01/solpay-core-service/internal/core/ports/services"
+	"github.com/Narutchai01/solpay-core-service/internal/core/services"
 	"github.com/gofiber/fiber/v2"
 )
 
 type ExampleHandler struct {
-	exampleService service.ExampleService
+	exampleService services.ExampleService
 }
 
-func NewExampleHandler(exampleService service.ExampleService) *ExampleHandler {
+func NewExampleHandler(exampleService services.ExampleService) *ExampleHandler {
 	return &ExampleHandler{
 		exampleService: exampleService,
 	}
