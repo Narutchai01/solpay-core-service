@@ -2,6 +2,8 @@ package handler
 
 import (
 	"github.com/Narutchai01/solpay-core-service/internal/core/services"
+	"github.com/Narutchai01/solpay-core-service/internal/entities"
+	"github.com/Narutchai01/solpay-core-service/internal/utils"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -18,15 +20,12 @@ func NewExampleHandler(exampleService services.ExampleService) *ExampleHandler {
 func (h *ExampleHandler) HandleExampleGetById(c *fiber.Ctx) error {
 	id, err := c.ParamsInt("id")
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid ID parameter",
-		})
+		msg := utils.FormatValidationError(err)
+		appErr := entities.NewAppError(entities.ErrTypeBadRequest, msg, err)
+		return utils.HandleResponse(c, nil, appErr)
 	}
+
 	example, err := h.exampleService.GetExampleByID(id)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to retrieve example",
-		})
-	}
-	return c.Status(fiber.StatusOK).JSON(example)
+
+	return utils.HandleResponse(c, example, err)
 }

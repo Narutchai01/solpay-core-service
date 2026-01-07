@@ -1,6 +1,8 @@
 package services
 
 import (
+	"errors"
+
 	ports "github.com/Narutchai01/solpay-core-service/internal/core/ports/repositories"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
 )
@@ -18,5 +20,13 @@ func NewExampleService(r ports.ExampleRepository) ExampleService {
 }
 
 func (s *exampleService) GetExampleByID(id int) (entities.ExampleEntity, error) {
-	return s.repo.GetExampleByID(id)
+	var example entities.ExampleEntity
+	example, err := s.repo.GetExampleByID(id)
+	if err != nil {
+		if errors.Is(err, entities.ErrNotFound) {
+			return entities.ExampleEntity{}, entities.NewAppError(entities.ErrTypeNotFound, "example not found", err)
+		}
+		return entities.ExampleEntity{}, entities.NewAppError(entities.ErrTypeInternal, "internal server error", err)
+	}
+	return example, nil
 }
