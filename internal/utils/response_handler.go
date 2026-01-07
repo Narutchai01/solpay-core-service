@@ -9,7 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func HandleError(c *fiber.Ctx, err error) error {
+func handleError(c *fiber.Ctx, err error) error {
 	code := fiber.StatusInternalServerError
 	msg := "Internal Server Error"
 
@@ -36,4 +36,25 @@ func HandleError(c *fiber.Ctx, err error) error {
 	}
 
 	return c.Status(code).JSON(response.FormaterResponseDTO(code, msg, nil, msg))
+}
+
+func handleSuccess(c *fiber.Ctx, status int, msg string, data interface{}) error {
+	return c.Status(status).JSON(response.FormaterResponseDTO(status, msg, data, nil))
+}
+
+func HandleResponse(c *fiber.Ctx, data interface{}, err error, message ...string) error {
+	if err != nil {
+		return handleError(c, err)
+	}
+	code := fiber.StatusOK
+	if c.Method() == fiber.MethodPost {
+		code = fiber.StatusCreated
+	}
+
+	msg := "Success"
+	if len(message) > 0 && message[0] != "" {
+		msg = message[0]
+	}
+	return handleSuccess(c, code, msg, data)
+
 }

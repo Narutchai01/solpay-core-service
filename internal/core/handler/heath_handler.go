@@ -20,5 +20,5 @@ func (h *HealthHandler) HandleHealthCheck(c *fiber.Ctx) error {
 
 	msg := fmt.Sprintf("Service is running. Environment: %s, on port %s", cfg.Environment, cfg.APPPort)
 
-	return utils.HandleSuccess(c, fiber.StatusOK, msg, nil)
+	return utils.HandleResponse(c, nil, nil, msg)
 }

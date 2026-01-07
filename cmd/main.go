@@ -23,7 +23,7 @@ func main() {
 	}))
 
 	app.Get("/", func(c *fiber.Ctx) error {
-		return utils.HandleSuccess(c, fiber.StatusOK, "Server is running", nil)
+		return utils.HandleResponse(c, nil, nil, "Server is running")
 	})
 
 	db, err := db.ConnectDB()
