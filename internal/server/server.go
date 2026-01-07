@@ -16,15 +16,15 @@ type Server struct {
 	TimeZone string
 }
 
-func New(port string, timeZone string) *Server {
+func New(port *string, timeZone *string) *Server {
 	app := fiber.New(fiber.Config{
 		AppName: "Solpay core service",
 	})
 
 	return &Server{
 		App:      app,
-		Port:     port,
-		TimeZone: timeZone,
+		Port:     *port,
+		TimeZone: *timeZone,
 	}
 }
 

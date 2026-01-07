@@ -9,8 +9,8 @@ type AccountDTO struct {
 	UpdatedAt     string `json:"updated_at"`
 }
 
-func FormaterAccountDTO(account entities.AccountEntity) AccountDTO {
-	return AccountDTO{
+func FormaterAccountDTO(account *entities.AccountEntity) *AccountDTO {
+	return &AccountDTO{
 		ID:            account.ID,
 		PublicAddress: account.PublicAddress,
 		CreatedAt:     account.CreatedAt.String(),
@@ -18,10 +18,10 @@ func FormaterAccountDTO(account entities.AccountEntity) AccountDTO {
 	}
 }
 
-func FormaterAccountDTOS(accounts []entities.AccountEntity) []AccountDTO {
-	var accountModels []AccountDTO
+func FormaterAccountDTOS(accounts []entities.AccountEntity) *[]AccountDTO {
+	var accountDTOs []AccountDTO
 	for _, account := range accounts {
-		accountModels = append(accountModels, FormaterAccountDTO(account))
+		accountDTOs = append(accountDTOs, *FormaterAccountDTO(&account))
 	}
-	return accountModels
+	return &accountDTOs
 }

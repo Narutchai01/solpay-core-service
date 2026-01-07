@@ -12,8 +12,8 @@ import (
 
 // Note: Define the AccountService interface
 type AccountService interface {
-	CreateAccount(req request.CreateAccountRequest) (entities.AccountEntity, error)
-	GetAccounts(page int, limit int) ([]entities.AccountEntity, error)
+	CreateAccount(req request.CreateAccountRequest) (*entities.AccountEntity, error)
+	GetAccounts(page int, limit int) (*[]entities.AccountEntity, error)
 }
 
 // Note: Implement the AccountService interface
@@ -28,7 +28,7 @@ func NewAccountService(accountRepo repositories.AccountRepository) AccountServic
 	}
 }
 
-func (s *accountService) CreateAccount(req request.CreateAccountRequest) (entities.AccountEntity, error) {
+func (s *accountService) CreateAccount(req request.CreateAccountRequest) (*entities.AccountEntity, error) {
 	// NOTE: You might want to add additional validation or business logic here
 	account := entities.AccountEntity{
 		PublicAddress: req.PublicAddress,
@@ -36,22 +36,22 @@ func (s *accountService) CreateAccount(req request.CreateAccountRequest) (entiti
 	}
 
 	// NOTE: Handle potential conflicts or errors during account creation
-	createdAccount, err := s.accountRepo.CreateAccount(account)
+	err := s.accountRepo.CreateAccount(&account)
 	if err != nil {
 		// Note: Handle specific error cases
 		if errors.Is(err, entities.ErrConflict) {
 			// NOTE : if account already exists
 			errMessage := fmt.Sprintf("Account with public address %s already exists", req.PublicAddress)
-			return entities.AccountEntity{}, entities.NewAppError(entities.ErrTypeConflict, errMessage, err)
+			return nil, entities.NewAppError(entities.ErrTypeConflict, errMessage, err)
 		}
 		msg := utils.FormatValidationError(err)
 		// Generic error handling
-		return entities.AccountEntity{}, entities.NewAppError(entities.ErrTypeInternal, msg, err)
+		return nil, entities.NewAppError(entities.ErrTypeInternal, msg, err)
 	}
-	return createdAccount, nil
+	return &account, nil
 }
 
-func (s *accountService) GetAccounts(page int, limit int) ([]entities.AccountEntity, error) {
+func (s *accountService) GetAccounts(page int, limit int) (*[]entities.AccountEntity, error) {
 	accounts, err := s.accountRepo.GetAccounts(page, limit)
 	if err != nil {
 		msg := utils.FormatValidationError(err)

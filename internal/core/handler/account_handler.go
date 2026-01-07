@@ -83,10 +83,10 @@ func (h *accountHandler) GetAccountsHandler(c *fiber.Ctx) error {
 		return utils.HandleResponse(c, nil, err)
 	}
 
-	pagination := response.FormaterPaginationResponseDTO(100, page, response.FormaterAccountDTOS(accounts)) // FIXME: fix total and totalPages
+	pagination := response.FormaterPaginationResponseDTO(100, page, response.FormaterAccountDTOS(*accounts)) // FIXME: fix total and totalPages
 
 	// NOTE: define success message
-	msg := fmt.Sprintf("Retrieved %d accounts successfully", len(accounts))
+	msg := fmt.Sprintf("Retrieved %d accounts successfully", len(*accounts))
 
 	return utils.HandleResponse(c, pagination, nil, msg)
 }

@@ -9,7 +9,7 @@ import (
 
 func main() {
 	cgf := config.LoadConfig()
-	server := server.New(cgf.APPPort, cgf.TimeZone)
+	server := server.New(&cgf.APPPort, &cgf.TimeZone)
 
 	if err := server.Start(); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
