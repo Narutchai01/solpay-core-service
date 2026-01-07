@@ -15,3 +15,19 @@ func FormaterResponseDTO(code int, message string, data interface{}, err interfa
 		Error:   err,
 	}
 }
+
+type PaginationResponseDTO struct {
+	TotalItems  int         `json:"total_items"`
+	TotalPages  int         `json:"total_pages"`
+	CurrentPage int         `json:"current_page"`
+	Items       interface{} `json:"items"`
+}
+
+func FormaterPaginationResponseDTO(totalItems int, totalPages int, currentPage int, items interface{}) *PaginationResponseDTO {
+	return &PaginationResponseDTO{
+		TotalItems:  totalItems,
+		TotalPages:  totalPages,
+		CurrentPage: currentPage,
+		Items:       items,
+	}
+}

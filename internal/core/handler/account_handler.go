@@ -6,6 +6,7 @@ import (
 
 	"github.com/Narutchai01/solpay-core-service/internal/core/services"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
+	"github.com/Narutchai01/solpay-core-service/internal/dto/response"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
 	"github.com/Narutchai01/solpay-core-service/internal/utils"
 	"github.com/go-playground/validator/v10"
@@ -81,9 +82,11 @@ func (h *accountHandler) GetAccountsHandler(c *fiber.Ctx) error {
 		return utils.HandleError(c, err)
 	}
 
+	pagination := response.FormaterPaginationResponseDTO(100, 100, page, accounts) // FIXME: fix total and totalPages
+
 	// NOTE: define success message
 	msg := fmt.Sprintf("Retrieved %d accounts successfully", len(accounts))
 
 	slog.Info(msg)
-	return utils.HandleSuccess(c, fiber.StatusOK, msg, accounts)
+	return utils.HandleSuccess(c, fiber.StatusOK, msg, pagination)
 }
