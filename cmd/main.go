@@ -5,6 +5,7 @@ import (
 
 	"github.com/Narutchai01/solpay-core-service/internal/config"
 	"github.com/Narutchai01/solpay-core-service/internal/db"
+	"github.com/Narutchai01/solpay-core-service/internal/models/response"
 	"github.com/Narutchai01/solpay-core-service/internal/routes"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -22,7 +23,7 @@ func main() {
 	}))
 
 	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("Hello, World!")
+		return c.JSON(response.NewResponseModel(fiber.StatusOK, "Server is running", nil, nil))
 	})
 
 	db, err := db.ConnectDB()
