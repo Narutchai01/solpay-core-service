@@ -5,8 +5,18 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func HealthRoute(route fiber.Router) {
+type HealthRouteConfig struct {
+	route fiber.Router
+}
+
+func NewHealthRouteConfig(route fiber.Router) *HealthRouteConfig {
+	return &HealthRouteConfig{
+		route: route,
+	}
+}
+
+func (hrc *HealthRouteConfig) Setup() {
 	healthHandler := handler.NewHealthHandler()
 
-	route.Get("/", healthHandler.HandleHealthCheck)
+	hrc.route.Get("/", healthHandler.HandleHealthCheck)
 }

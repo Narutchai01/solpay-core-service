@@ -14,13 +14,16 @@ func RoutesConfig(app *fiber.App, db *gorm.DB) {
 
 	// Example route group
 	exampleGroup := v1.Group("/example")
-	ExampleRoute(exampleGroup, db)
+	exampleRouteConfig := NewExampleRouteConfig(exampleGroup, db)
+	exampleRouteConfig.Setup()
 
 	// Account route group
 	accountGroup := v1.Group("/accounts")
-	AccountRoute(accountGroup, db, validate)
+	accountRouteConfig := NewAccountRouteConfig(accountGroup, db, validate)
+	accountRouteConfig.Setup()
 
 	// Health route group
 	healthGroup := v1.Group("/health")
-	HealthRoute(healthGroup)
+	healthRouteConfig := NewHealthRouteConfig(healthGroup)
+	healthRouteConfig.Setup()
 }

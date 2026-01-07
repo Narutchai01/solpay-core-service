@@ -9,11 +9,25 @@ import (
 	"gorm.io/gorm"
 )
 
-func AccountRoute(route fiber.Router, db *gorm.DB, validate *validator.Validate) {
-	accountRepo := repositories.NewGormAccountRepository(db)
-	accountService := services.NewAccountService(accountRepo)
+type AccountRouteConfig struct {
+	route    fiber.Router
+	db       *gorm.DB
+	validate *validator.Validate
+}
+
+func NewAccountRouteConfig(route fiber.Router, db *gorm.DB, validate *validator.Validate) *AccountRouteConfig {
+	return &AccountRouteConfig{
+		route:    route,
+		db:       db,
+		validate: validate,
+	}
+}
+
+func (arc *AccountRouteConfig) Setup() {
+	accountRepository := repositories.NewGormAccountRepository(arc.db)
+	accountService := services.NewAccountService(accountRepository)
 	accountHandler := handler.NewAccountHandler(accountService)
 
-	route.Get("/", accountHandler.GetAccountsHandler)
-	route.Post("/", accountHandler.CreateAccountHandler)
+	arc.route.Post("/", accountHandler.CreateAccountHandler)
+	arc.route.Get("/", accountHandler.GetAccountsHandler)
 }

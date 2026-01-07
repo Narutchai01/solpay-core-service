@@ -8,11 +8,22 @@ import (
 	"gorm.io/gorm"
 )
 
-func ExampleRoute(route fiber.Router, db *gorm.DB) {
+type ExampleRouteConfig struct {
+	route fiber.Router
+	db    *gorm.DB
+}
 
-	exampleRepo := repositories.NewGormExampleRepository(db)
+func NewExampleRouteConfig(route fiber.Router, db *gorm.DB) *ExampleRouteConfig {
+	return &ExampleRouteConfig{
+		route: route,
+		db:    db,
+	}
+}
+
+func (erc *ExampleRouteConfig) Setup() {
+	exampleRepo := repositories.NewGormExampleRepository(erc.db)
 	exampleService := services.NewExampleService(exampleRepo)
 	exampleHandler := handler.NewExampleHandler(exampleService)
 
-	route.Get("/:id", exampleHandler.HandleExampleGetById)
+	erc.route.Get("/:id", exampleHandler.HandleExampleGetById)
 }
