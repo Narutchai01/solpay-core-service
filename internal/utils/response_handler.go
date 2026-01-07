@@ -39,6 +39,7 @@ func handleError(c *fiber.Ctx, err error) error {
 }
 
 func handleSuccess(c *fiber.Ctx, status int, msg string, data interface{}) error {
+	slog.Info(msg)
 	return c.Status(status).JSON(response.FormaterResponseDTO(status, msg, data, nil))
 }
 

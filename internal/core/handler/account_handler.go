@@ -2,7 +2,6 @@ package handler
 
 import (
 	"fmt"
-	"log/slog"
 
 	"github.com/Narutchai01/solpay-core-service/internal/core/services"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
@@ -58,7 +57,6 @@ func (h *accountHandler) CreateAccountHandler(c *fiber.Ctx) error {
 
 	accountDTO := response.FormaterAccountDTO(account)
 
-	slog.Info(msg)
 	return utils.HandleResponse(c, accountDTO, nil, msg)
 }
 
@@ -90,6 +88,5 @@ func (h *accountHandler) GetAccountsHandler(c *fiber.Ctx) error {
 	// NOTE: define success message
 	msg := fmt.Sprintf("Retrieved %d accounts successfully", len(accounts))
 
-	slog.Info(msg)
 	return utils.HandleResponse(c, pagination, nil, msg)
 }
