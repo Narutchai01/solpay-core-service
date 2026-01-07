@@ -44,6 +44,8 @@ func ConnectDB() (*gorm.DB, error) {
 
 	db.AutoMigrate(entities.ExampleEntity{}, entities.AccountEntity{})
 
+	db.Migrator().CreateTable(&entities.AccountEntity{})
+
 	return db, nil
 
 }

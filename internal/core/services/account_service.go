@@ -25,7 +25,7 @@ func NewAccountService(accountRepo portRepo.AccountRepository) AccountService {
 func (s *accountService) CreateAccount(req request.CreateAccountRequest) (entities.AccountEntity, error) {
 	account := entities.AccountEntity{
 		PublicAddress: req.PublicAddress,
-		KycToken:      req.KycToken,
+		KycToken:      &req.KycToken,
 	}
 
 	createdAccount, err := s.accountRepo.CreateAccount(account)

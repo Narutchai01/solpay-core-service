@@ -14,7 +14,7 @@ import (
 func main() {
 
 	cfg := config.LoadConfig()
-
+	// ประกาศไว้ข้างนอก Handler หรือใน main setup
 	app := fiber.New()
 
 	app.Use(logger.New(logger.Config{
