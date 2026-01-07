@@ -59,8 +59,24 @@ func (h *accountHandler) CreateAccountHandler(c *fiber.Ctx) error {
 }
 
 func (h *accountHandler) GetAccountsHandler(c *fiber.Ctx) error {
+
+	// NOTE: Get pagination query parameters
+	// FIXME: fix logic to use request struct
+	var req request.GetAccountsRequest
+	if err := c.QueryParser(&req); err != nil {
+		msg := utils.FormatValidationError(err)
+		return utils.HandleError(c, entities.NewAppError(entities.ErrTypeBadRequest, msg, err))
+	}
+
+	if err := h.validate.Struct(&req); err != nil {
+		msg := utils.FormatValidationError(err)
+		return utils.HandleError(c, entities.NewAppError(entities.ErrTypeBadRequest, msg, err))
+	}
+
+	page, limit := req.Page, req.Limit
+
 	// NOTE: Call the service to get accounts
-	accounts, err := h.accountService.GetAccounts(1, 10)
+	accounts, err := h.accountService.GetAccounts(page, limit)
 	if err != nil {
 		return utils.HandleError(c, err)
 	}
