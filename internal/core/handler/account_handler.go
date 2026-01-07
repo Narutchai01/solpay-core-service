@@ -56,8 +56,10 @@ func (h *accountHandler) CreateAccountHandler(c *fiber.Ctx) error {
 	// NOTE: define success message
 	msg := fmt.Sprintf("Account %d created successfully", account.ID)
 
+	accountDTO := response.FormaterAccountDTO(account)
+
 	slog.Info(msg)
-	return utils.HandleResponse(c, account, nil, msg)
+	return utils.HandleResponse(c, accountDTO, nil, msg)
 }
 
 func (h *accountHandler) GetAccountsHandler(c *fiber.Ctx) error {
@@ -83,7 +85,7 @@ func (h *accountHandler) GetAccountsHandler(c *fiber.Ctx) error {
 		return utils.HandleResponse(c, nil, err)
 	}
 
-	pagination := response.FormaterPaginationResponseDTO(100, page, accounts) // FIXME: fix total and totalPages
+	pagination := response.FormaterPaginationResponseDTO(100, page, response.FormaterAccountDTOS(accounts)) // FIXME: fix total and totalPages
 
 	// NOTE: define success message
 	msg := fmt.Sprintf("Retrieved %d accounts successfully", len(accounts))
