@@ -38,3 +38,11 @@ func (r *GormAccountRepository) GetAccounts(page int, limit int) ([]entities.Acc
 	}
 	return accounts, nil
 }
+
+func (r *GormAccountRepository) CountAccounts() (int64, error) {
+	var count int64
+	if err := r.db.Model(&entities.AccountEntity{}).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
+}

@@ -63,7 +63,6 @@ func (h *accountHandler) CreateAccountHandler(c *fiber.Ctx) error {
 func (h *accountHandler) GetAccountsHandler(c *fiber.Ctx) error {
 
 	// NOTE: Get pagination query parameters
-	// FIXME: fix logic to use request struct
 	var req request.GetAccountsRequest
 	if err := c.QueryParser(&req); err != nil {
 		msg := utils.FormatValidationError(err)
@@ -78,12 +77,12 @@ func (h *accountHandler) GetAccountsHandler(c *fiber.Ctx) error {
 	page, limit := req.Page, req.Limit
 
 	// NOTE: Call the service to get accounts
-	accounts, err := h.accountService.GetAccounts(page, limit)
+	accounts, total, err := h.accountService.GetAccounts(page, limit)
 	if err != nil {
 		return utils.HandleResponse(c, nil, err)
 	}
 
-	pagination := response.FormaterPaginationResponseDTO(100, page, response.FormaterAccountDTOS(accounts)) // FIXME: fix total and totalPages
+	pagination := response.FormaterPaginationResponseDTO(int(total), page, response.FormaterAccountDTOS(accounts))
 
 	// NOTE: define success message
 	msg := fmt.Sprintf("Retrieved %d accounts successfully", len(accounts))

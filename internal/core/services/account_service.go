@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports/repositories"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
@@ -13,7 +14,7 @@ import (
 // Note: Define the AccountService interface
 type AccountService interface {
 	CreateAccount(req request.CreateAccountRequest) (*entities.AccountEntity, error)
-	GetAccounts(page int, limit int) ([]entities.AccountEntity, error)
+	GetAccounts(page int, limit int) ([]entities.AccountEntity, int64, error)
 }
 
 // Note: Implement the AccountService interface
@@ -50,13 +51,35 @@ func (s *accountService) CreateAccount(req request.CreateAccountRequest) (*entit
 	}
 	return &account, nil
 }
+func (s *accountService) GetAccounts(page int, limit int) ([]entities.AccountEntity, int64, error) {
+	var accounts []entities.AccountEntity
+	var total int64
+	var errList, errCount error
+	var wg sync.WaitGroup
 
-func (s *accountService) GetAccounts(page int, limit int) ([]entities.AccountEntity, error) {
-	accounts, err := s.accountRepo.GetAccounts(page, limit)
-	if err != nil {
-		msg := utils.FormatValidationError(err)
-		// Generic error handling
-		return []entities.AccountEntity{}, entities.NewAppError(entities.ErrTypeInternal, msg, err)
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		accounts, errList = s.accountRepo.GetAccounts(page, limit)
+	}()
+
+	go func() {
+		defer wg.Done()
+		total, errCount = s.accountRepo.CountAccounts()
+	}()
+
+	wg.Wait()
+
+	if errList != nil {
+		msg := utils.FormatValidationError(errList)
+		return []entities.AccountEntity{}, 0, entities.NewAppError(entities.ErrTypeInternal, msg, errList)
 	}
-	return accounts, nil
+
+	if errCount != nil {
+		msg := utils.FormatValidationError(errCount)
+		return []entities.AccountEntity{}, 0, entities.NewAppError(entities.ErrTypeInternal, msg, errCount)
+	}
+
+	return accounts, total, nil
 }

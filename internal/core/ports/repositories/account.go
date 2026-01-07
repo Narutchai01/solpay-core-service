@@ -7,4 +7,5 @@ import (
 type AccountRepository interface {
 	CreateAccount(data *entities.AccountEntity) error
 	GetAccounts(page int, limit int) ([]entities.AccountEntity, error)
+	CountAccounts() (int64, error)
 }
