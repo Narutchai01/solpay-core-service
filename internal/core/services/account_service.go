@@ -13,7 +13,7 @@ import (
 // Note: Define the AccountService interface
 type AccountService interface {
 	CreateAccount(req request.CreateAccountRequest) (*entities.AccountEntity, error)
-	GetAccounts(page int, limit int) (*[]entities.AccountEntity, error)
+	GetAccounts(page int, limit int) ([]entities.AccountEntity, error)
 }
 
 // Note: Implement the AccountService interface
@@ -51,12 +51,12 @@ func (s *accountService) CreateAccount(req request.CreateAccountRequest) (*entit
 	return &account, nil
 }
 
-func (s *accountService) GetAccounts(page int, limit int) (*[]entities.AccountEntity, error) {
+func (s *accountService) GetAccounts(page int, limit int) ([]entities.AccountEntity, error) {
 	accounts, err := s.accountRepo.GetAccounts(page, limit)
 	if err != nil {
 		msg := utils.FormatValidationError(err)
 		// Generic error handling
-		return nil, entities.NewAppError(entities.ErrTypeInternal, msg, err)
+		return []entities.AccountEntity{}, entities.NewAppError(entities.ErrTypeInternal, msg, err)
 	}
 	return accounts, nil
 }
