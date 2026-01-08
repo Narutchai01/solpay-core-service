@@ -87,7 +87,7 @@ func (s *accountService) GetAccounts(page int, limit int) ([]entities.AccountEnt
 
 func (s *accountService) GetAccountByID(id int) (*entities.AccountEntity, error) {
 	var account entities.AccountEntity
-	account, err := s.accountRepo.GetAccountsByID(id)
+	account, err := s.accountRepo.GetAccountByID(id)
 	if err != nil {
 		if errors.Is(err, entities.ErrNotFound) {
 			return &entities.AccountEntity{}, entities.NewAppError(entities.ErrTypeNotFound, "account not found", err)

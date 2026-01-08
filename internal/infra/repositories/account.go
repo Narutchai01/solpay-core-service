@@ -47,7 +47,7 @@ func (r *GormAccountRepository) CountAccounts() (int64, error) {
 	return count, nil
 }
 
-func (r *GormAccountRepository) GetAccountsByID(accountID int) (entities.AccountEntity, error) {
+func (r *GormAccountRepository) GetAccountByID(accountID int) (entities.AccountEntity, error) {
 	var account entities.AccountEntity
 	if err := r.db.First(&account, accountID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
