@@ -46,3 +46,14 @@ func (r *GormAccountRepository) CountAccounts() (int64, error) {
 	}
 	return count, nil
 }
+
+func (r *GormAccountRepository) GetAccountByID(accountID int) (entities.AccountEntity, error) {
+	var account entities.AccountEntity
+	if err := r.db.First(&account, accountID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return entities.AccountEntity{}, entities.ErrNotFound
+		}
+		return entities.AccountEntity{}, entities.ErrInternal
+	}
+	return account, nil
+}

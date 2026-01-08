@@ -15,6 +15,7 @@ import (
 type AccountHandler interface {
 	CreateAccountHandler(c *fiber.Ctx) error
 	GetAccountsHandler(c *fiber.Ctx) error
+	GetAccountByIDHandler(c *fiber.Ctx) error
 }
 
 type accountHandler struct {
@@ -88,4 +89,22 @@ func (h *accountHandler) GetAccountsHandler(c *fiber.Ctx) error {
 	msg := fmt.Sprintf("Retrieved %d accounts successfully", len(accounts))
 
 	return utils.HandleResponse(c, pagination, nil, msg)
+}
+
+func (h *accountHandler) GetAccountByIDHandler(c *fiber.Ctx) error {
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		msg := utils.FormatValidationError(err)
+		appErr := entities.NewAppError(entities.ErrTypeBadRequest, msg, err)
+		return utils.HandleResponse(c, nil, appErr)
+	}
+
+	account, err := h.accountService.GetAccountByID(id)
+	if err != nil {
+		return utils.HandleResponse(c, nil, err)
+	}
+
+	accountDTO := response.FormaterAccountDTO(account)
+
+	return utils.HandleResponse(c, accountDTO, nil)
 }
