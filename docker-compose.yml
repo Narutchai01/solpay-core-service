@@ -53,3 +53,18 @@ services:
           path: ./go.mod
         - action: rebuild
           path: ./go.sum
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: solpayg-rabbitmq
+    ports:
+      - "5672:5672" # พอร์ตสำหรับเชื่อมต่อรับ-ส่งข้อมูล (AMQP)
+      - "15672:15672" # พอร์ตสำหรับหน้า Dashboard (RabbitMQ Management)
+    environment:
+      RABBITMQ_DEFAULT_USER: ${MQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${MQ_PASSWORD:-guest}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
