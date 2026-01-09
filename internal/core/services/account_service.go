@@ -16,6 +16,7 @@ type AccountService interface {
 	CreateAccount(req request.CreateAccountRequest) (*entities.AccountEntity, error)
 	GetAccounts(page int, limit int) ([]entities.AccountEntity, int64, error)
 	GetAccountByID(id int) (*entities.AccountEntity, error)
+	GetAccountByPublicAddress(address string) (*entities.AccountEntity, error)
 }
 
 // Note: Implement the AccountService interface
@@ -88,6 +89,18 @@ func (s *accountService) GetAccounts(page int, limit int) ([]entities.AccountEnt
 func (s *accountService) GetAccountByID(id int) (*entities.AccountEntity, error) {
 	var account entities.AccountEntity
 	account, err := s.accountRepo.GetAccountByID(id)
+	if err != nil {
+		if errors.Is(err, entities.ErrNotFound) {
+			return &entities.AccountEntity{}, entities.NewAppError(entities.ErrTypeNotFound, "account not found", err)
+		}
+		return &entities.AccountEntity{}, entities.NewAppError(entities.ErrTypeInternal, "internal server error", err)
+	}
+	return &account, nil
+}
+
+func (s *accountService) GetAccountByPublicAddress(address string) (*entities.AccountEntity, error) {
+	var account entities.AccountEntity
+	account, err := s.accountRepo.GetAccountByPublicAddress(address)
 	if err != nil {
 		if errors.Is(err, entities.ErrNotFound) {
 			return &entities.AccountEntity{}, entities.NewAppError(entities.ErrTypeNotFound, "account not found", err)

@@ -16,6 +16,7 @@ type AccountHandler interface {
 	CreateAccountHandler(c *fiber.Ctx) error
 	GetAccountsHandler(c *fiber.Ctx) error
 	GetAccountByIDHandler(c *fiber.Ctx) error
+	GetAccountByPublicAddressHandler(c *fiber.Ctx) error
 }
 
 type accountHandler struct {
@@ -106,5 +107,22 @@ func (h *accountHandler) GetAccountByIDHandler(c *fiber.Ctx) error {
 
 	accountDTO := response.FormaterAccountDTO(account)
 
+	return utils.HandleResponse(c, accountDTO, nil)
+}
+
+func (h *accountHandler) GetAccountByPublicAddressHandler(c *fiber.Ctx) error {
+	address := c.Params("publicAddress")
+
+	if address == "" {
+		appErr := entities.NewAppError(entities.ErrTypeBadRequest, "public address is required", nil)
+		return utils.HandleResponse(c, nil, appErr)
+	}
+
+	account, err := h.accountService.GetAccountByPublicAddress(address)
+	if err != nil {
+		return utils.HandleResponse(c, nil, err)
+	}
+
+	accountDTO := response.FormaterAccountDTO(account)
 	return utils.HandleResponse(c, accountDTO, nil)
 }

@@ -57,3 +57,14 @@ func (r *GormAccountRepository) GetAccountByID(accountID int) (entities.AccountE
 	}
 	return account, nil
 }
+
+func (r *GormAccountRepository) GetAccountByPublicAddress(address string) (entities.AccountEntity, error) {
+	var account entities.AccountEntity
+	if err := r.db.Where("public_address = ?", address).First(&account).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return entities.AccountEntity{}, entities.ErrNotFound
+		}
+		return entities.AccountEntity{}, entities.ErrInternal
+	}
+	return account, nil
+}
