@@ -113,11 +113,6 @@ func (h *accountHandler) GetAccountByIDHandler(c *fiber.Ctx) error {
 func (h *accountHandler) GetAccountByPublicAddressHandler(c *fiber.Ctx) error {
 	address := c.Params("publicAddress")
 
-	if address == "" {
-		appErr := entities.NewAppError(entities.ErrTypeBadRequest, "public address is required", nil)
-		return utils.HandleResponse(c, nil, appErr)
-	}
-
 	account, err := h.accountService.GetAccountByPublicAddress(address)
 	if err != nil {
 		return utils.HandleResponse(c, nil, err)
