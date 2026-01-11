@@ -86,7 +86,6 @@ func (s *accountService) GetAccounts(page int, limit int) ([]entities.AccountEnt
 }
 
 func (s *accountService) GetAccountByID(id int) (*entities.AccountEntity, error) {
-	var account entities.AccountEntity
 	account, err := s.accountRepo.GetAccountByID(id)
 	if err != nil {
 		if errors.Is(err, entities.ErrNotFound) {
@@ -94,5 +93,5 @@ func (s *accountService) GetAccountByID(id int) (*entities.AccountEntity, error)
 		}
 		return &entities.AccountEntity{}, entities.NewAppError(entities.ErrTypeInternal, "internal server error", err)
 	}
-	return &account, nil
+	return account, nil
 }
