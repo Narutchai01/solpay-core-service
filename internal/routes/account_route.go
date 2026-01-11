@@ -30,4 +30,5 @@ func (arc *AccountRouteConfig) Setup() {
 
 	arc.route.Post("/", accountHandler.CreateAccountHandler)
 	arc.route.Get("/", accountHandler.GetAccountsHandler)
+	arc.route.Get("/:id", accountHandler.GetAccountByIDHandler)
 }
