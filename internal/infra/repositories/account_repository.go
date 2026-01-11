@@ -47,13 +47,24 @@ func (r *GormAccountRepository) CountAccounts() (int64, error) {
 	return count, nil
 }
 
-func (r *GormAccountRepository) GetAccountByID(accountID int) (entities.AccountEntity, error) {
+func (r *GormAccountRepository) GetAccountByID(accountID int) (*entities.AccountEntity, error) {
 	var account entities.AccountEntity
 	if err := r.db.First(&account, accountID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return entities.AccountEntity{}, entities.ErrNotFound
+			return &entities.AccountEntity{}, entities.ErrNotFound
 		}
-		return entities.AccountEntity{}, entities.ErrInternal
+		return &entities.AccountEntity{}, entities.ErrInternal
 	}
-	return account, nil
+	return &account, nil
+}
+
+func (r *GormAccountRepository) GetAccountByPublicAddress(address string) (*entities.AccountEntity, error) {
+	var account entities.AccountEntity
+	if err := r.db.Where("public_address = ?", address).First(&account).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return &entities.AccountEntity{}, entities.ErrNotFound
+		}
+		return &entities.AccountEntity{}, entities.ErrInternal
+	}
+	return &account, nil
 }
