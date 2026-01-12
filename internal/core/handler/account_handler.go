@@ -48,7 +48,7 @@ func (h *accountHandler) CreateAccountHandler(c *fiber.Ctx) error {
 	}
 
 	// NOTE: Call the service to create the account
-	account, err := h.accountService.CreateAccount(req)
+	account, err := h.accountService.CreateAccount(c.UserContext(), req)
 	if err != nil {
 		return utils.HandleResponse(c, nil, err)
 	}
