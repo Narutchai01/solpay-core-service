@@ -26,4 +26,9 @@ func RoutesConfig(app *fiber.App, db *gorm.DB) {
 	healthGroup := v1.Group("/health")
 	healthRouteConfig := NewHealthRouteConfig(healthGroup)
 	healthRouteConfig.Setup()
+
+	// Balance route group
+	balanceGroup := v1.Group("/balances")
+	balanceRouteConfig := NewBalanceRouteConfig(balanceGroup, db, validate)
+	balanceRouteConfig.Setup()
 }
