@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"log/slog"
@@ -42,10 +43,17 @@ func ConnectDB() (*gorm.DB, error) {
 
 	slog.Info("Database connected successfully")
 
-	db.AutoMigrate(entities.ExampleEntity{}, entities.AccountEntity{})
+	db.AutoMigrate(entities.ExampleEntity{}, entities.AccountEntity{}, entities.BalanceEntity{})
 
 	db.Migrator().CreateTable(&entities.AccountEntity{})
 
 	return db, nil
 
+}
+
+func GetTx(ctx context.Context, defaultDB *gorm.DB) *gorm.DB {
+	if tx, ok := ctx.Value("tx_key").(*gorm.DB); ok {
+		return tx
+	}
+	return defaultDB
 }

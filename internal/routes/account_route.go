@@ -25,7 +25,9 @@ func NewAccountRouteConfig(route fiber.Router, db *gorm.DB, validate *validator.
 
 func (arc *AccountRouteConfig) Setup() {
 	accountRepository := repositories.NewGormAccountRepository(arc.db)
-	accountService := services.NewAccountService(accountRepository)
+	balanceRepository := repositories.NewGormBalanceRepository(arc.db)
+	uowRepository := repositories.NewSqlUnitOfWork(arc.db)
+	accountService := services.NewAccountService(accountRepository, balanceRepository, uowRepository)
 	accountHandler := handler.NewAccountHandler(accountService)
 
 	arc.route.Post("/", accountHandler.CreateAccountHandler)

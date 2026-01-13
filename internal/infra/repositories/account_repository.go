@@ -1,9 +1,11 @@
 package repositories
 
 import (
+	"context"
 	"errors"
 
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports/repositories"
+	"github.com/Narutchai01/solpay-core-service/internal/db"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
 	"gorm.io/gorm"
 )
@@ -18,9 +20,11 @@ func NewGormAccountRepository(db *gorm.DB) repositories.AccountRepository {
 	return &GormAccountRepository{db: db}
 }
 
-func (r *GormAccountRepository) CreateAccount(data *entities.AccountEntity) error {
+func (r *GormAccountRepository) CreateAccount(txCtx context.Context, data *entities.AccountEntity) error {
+
+	db := db.GetTx(txCtx, r.db)
 	// Note : Implement the logic to create an account in the database
-	if err := r.db.Create(&data).Error; err != nil {
+	if err := db.Create(&data).Error; err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return entities.ErrConflict
 		}

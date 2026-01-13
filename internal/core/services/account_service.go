@@ -1,8 +1,8 @@
 package services
 
 import (
+	"context"
 	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports/repositories"
@@ -13,7 +13,7 @@ import (
 
 // Note: Define the AccountService interface
 type AccountService interface {
-	CreateAccount(req request.CreateAccountRequest) (*entities.AccountEntity, error)
+	CreateAccount(ctx context.Context, req request.CreateAccountRequest) (*entities.AccountEntity, error)
 	GetAccounts(page int, limit int) ([]entities.AccountEntity, int64, error)
 	GetAccountByID(id int) (*entities.AccountEntity, error)
 }
@@ -21,37 +21,52 @@ type AccountService interface {
 // Note: Implement the AccountService interface
 type accountService struct {
 	accountRepo repositories.AccountRepository
+	balanceRepo repositories.BalanceRepository
+	uowRepo     repositories.UnitOfWork
 }
 
 // Note: Constructor function for AccountService
-func NewAccountService(accountRepo repositories.AccountRepository) AccountService {
+func NewAccountService(accountRepo repositories.AccountRepository, balanceRepo repositories.BalanceRepository, uowRepo repositories.UnitOfWork) AccountService {
 	return &accountService{
 		accountRepo: accountRepo,
+		balanceRepo: balanceRepo,
+		uowRepo:     uowRepo,
 	}
 }
 
-func (s *accountService) CreateAccount(req request.CreateAccountRequest) (*entities.AccountEntity, error) {
-	// NOTE: You might want to add additional validation or business logic here
-	account := entities.AccountEntity{
-		PublicAddress: req.PublicAddress,
-		KycToken:      &req.KycToken,
-	}
+func (s *accountService) CreateAccount(ctx context.Context, req request.CreateAccountRequest) (*entities.AccountEntity, error) {
 
-	// NOTE: Handle potential conflicts or errors during account creation
-	err := s.accountRepo.CreateAccount(&account)
-	if err != nil {
-		// Note: Handle specific error cases
-		if errors.Is(err, entities.ErrConflict) {
-			// NOTE : if account already exists
-			errMessage := fmt.Sprintf("Account with public address %s already exists", req.PublicAddress)
-			return nil, entities.NewAppError(entities.ErrTypeConflict, errMessage, err)
+	result, err := s.uowRepo.Execute(ctx, func(ctx context.Context) (any, error) {
+		account := &entities.AccountEntity{
+			PublicAddress: req.PublicAddress,
+			KycToken:      &req.KycToken,
 		}
+
+		if err := s.accountRepo.CreateAccount(ctx, account); err != nil {
+			return &entities.AccountEntity{}, err
+		}
+
+		balance := &entities.BalanceEntity{
+			AccountID:  account.ID,
+			THBAmount:  0,
+			USDTAmount: 0,
+		}
+
+		if err := s.balanceRepo.CreateBalance(ctx, balance); err != nil {
+			return &entities.AccountEntity{}, err
+		}
+
+		return account, nil
+	})
+
+	if err != nil {
 		msg := utils.FormatValidationError(err)
-		// Generic error handling
-		return nil, entities.NewAppError(entities.ErrTypeInternal, msg, err)
+		return &entities.AccountEntity{}, entities.NewAppError(entities.ErrTypeInternal, msg, err)
 	}
-	return &account, nil
+
+	return result.(*entities.AccountEntity), nil
 }
+
 func (s *accountService) GetAccounts(page int, limit int) ([]entities.AccountEntity, int64, error) {
 	var accounts []entities.AccountEntity
 	var total int64
