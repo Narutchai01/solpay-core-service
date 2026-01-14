@@ -10,4 +10,5 @@ type BalanceRepository interface {
 	CreateBalance(txCtx context.Context, data *entities.BalanceEntity) error
 	GetBalances(page int, limit int) ([]entities.BalanceEntity, error)
 	CountBalances() (int64, error)
+	GetBalanceByID(id int) (*entities.BalanceEntity, error)
 }
