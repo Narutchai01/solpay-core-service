@@ -14,6 +14,7 @@ import (
 
 type BalanceHandler interface {
 	GetBalancesHandler(c *fiber.Ctx) error
+	GetBalanceByIDHandler(c *fiber.Ctx) error
 }
 
 type balanceHandler struct {
@@ -53,4 +54,21 @@ func (h *balanceHandler) GetBalancesHandler(c *fiber.Ctx) error {
 	msg := fmt.Sprintf("Retrieved %d balances successfully", len(balances))
 
 	return utils.HandleResponse(c, pagination, nil, msg)
+}
+
+func (h *balanceHandler) GetBalanceByIDHandler(c *fiber.Ctx) error {
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		msg := utils.FormatValidationError(err)
+		appErr := entities.NewAppError(entities.ErrTypeBadRequest, msg, err)
+		return utils.HandleResponse(c, nil, appErr)
+	}
+
+	balance, err := h.balanceService.GetBalanceByID(id)
+	if err != nil {
+		return utils.HandleResponse(c, nil, err)
+	}
+
+	balanceDTO := response.FormaterBalanceDTO(balance)
+	return utils.HandleResponse(c, balanceDTO, nil)
 }

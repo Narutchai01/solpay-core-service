@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"errors"
 
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports/repositories"
 	"github.com/Narutchai01/solpay-core-service/internal/db"
@@ -41,4 +42,15 @@ func (r *BalanceRepository) CountBalances() (int64, error) {
 		return 0, err
 	}
 	return count, nil
+}
+
+func (r *BalanceRepository) GetBalanceByID(balanceID int) (*entities.BalanceEntity, error) {
+	var balance entities.BalanceEntity
+	if err := r.db.First(&balance, balanceID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return &entities.BalanceEntity{}, entities.ErrNotFound
+		}
+		return &entities.BalanceEntity{}, entities.ErrInternal
+	}
+	return &balance, nil
 }

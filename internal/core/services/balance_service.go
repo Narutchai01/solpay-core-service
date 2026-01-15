@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports/repositories"
@@ -10,6 +11,7 @@ import (
 
 type BalanceService interface {
 	GetBalances(page int, limit int) ([]entities.BalanceEntity, int64, error)
+	GetBalanceByID(id int) (*entities.BalanceEntity, error)
 }
 
 type balanceService struct {
@@ -56,4 +58,15 @@ func (s *balanceService) GetBalances(page int, limit int) ([]entities.BalanceEnt
 	}
 
 	return balances, total, nil
+}
+
+func (s *balanceService) GetBalanceByID(id int) (*entities.BalanceEntity, error) {
+	balance, err := s.balanceRepo.GetBalanceByID(id)
+	if err != nil {
+		if errors.Is(err, entities.ErrNotFound) {
+			return &entities.BalanceEntity{}, entities.NewAppError(entities.ErrTypeNotFound, "balance not found", err)
+		}
+		return &entities.BalanceEntity{}, entities.NewAppError(entities.ErrTypeInternal, "internal server error", err)
+	}
+	return balance, nil
 }

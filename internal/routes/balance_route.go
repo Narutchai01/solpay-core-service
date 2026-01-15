@@ -30,4 +30,5 @@ func (brc *BalanceRouteConfig) Setup() {
 	balanceHandler := handler.NewBalanceHandler(balanceService)
 
 	brc.route.Get("/", balanceHandler.GetBalancesHandler)
+	brc.route.Get("/:id", balanceHandler.GetBalanceByIDHandler)
 }
