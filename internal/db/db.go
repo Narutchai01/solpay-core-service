@@ -43,7 +43,7 @@ func ConnectDB() (*gorm.DB, error) {
 
 	slog.Info("Database connected successfully")
 
-	db.AutoMigrate(entities.ExampleEntity{}, entities.AccountEntity{}, entities.BalanceEntity{})
+	db.AutoMigrate(entities.ExampleEntity{}, entities.AccountEntity{}, entities.BalanceEntity{}, entities.TransactionEntity{})
 
 	db.Migrator().CreateTable(&entities.AccountEntity{})
 
