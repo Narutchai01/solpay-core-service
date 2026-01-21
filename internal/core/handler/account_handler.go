@@ -54,11 +54,16 @@ func (h *accountHandler) CreateAccountHandler(c *fiber.Ctx) error {
 	}
 
 	// NOTE: define success message
-	msg := fmt.Sprintf("Account %d created successfully", account.ID)
+	msg := fmt.Sprintf("Account %d ", account.ID)
 
-	accountDTO := response.FormaterAccountDTO(account)
+	accessToken := utils.GenerateAccesssToken(account.ID)
 
-	return utils.HandleResponse(c, accountDTO, nil, msg)
+	tokenDTP := response.TokenDTO{
+		AccessToken:  accessToken,
+		RefreshToken: "asdasdasdasd",
+	}
+
+	return utils.HandleResponse(c, tokenDTP, nil, msg)
 }
 
 func (h *accountHandler) GetAccountsHandler(c *fiber.Ctx) error {
