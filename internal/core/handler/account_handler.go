@@ -59,7 +59,8 @@ func (h *accountHandler) CreateAccountHandler(c *fiber.Ctx) error {
 	accessToken := utils.GenerateAccesssToken(account.ID)
 
 	tokenDTP := response.TokenDTO{
-		AccessToken:  accessToken,
+		AccessToken: accessToken,
+		// TODO: implement refresh token later
 		RefreshToken: "asdasdasdasd",
 	}
 
