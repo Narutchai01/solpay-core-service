@@ -214,3 +214,81 @@ func TestGormAccountRepositoryGetAccountByID(t *testing.T) {
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 }
+func TestGormAccountRepositoryGetAccountByPublicAddress(t *testing.T) {
+	t.Run("GetAccountByPublicAddress_Success", func(t *testing.T) {
+		db, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("An error '%s' was not expected when opening a stub database connection", err)
+		}
+		defer db.Close()
+
+		gormDB, err := gorm.Open(postgres.New(postgres.Config{Conn: db}), &gorm.Config{})
+		if err != nil {
+			panic("Failed to connect to database")
+		}
+
+		repo := repositories.NewGormAccountRepository(gormDB)
+
+		now := time.Now()
+		address := "test_address_123"
+		mock.ExpectQuery(`SELECT \* FROM "account_entities" WHERE public_address = \$1 AND "account_entities"\."deleted_at" IS NULL ORDER BY "account_entities"\."id" LIMIT \$2`).
+			WithArgs(address, 1).
+			WillReturnRows(sqlmock.NewRows([]string{"id", "public_address", "kyc_token", "created_at", "updated_at", "deleted_at"}).
+				AddRow(1, address, nil, now, now, nil))
+
+		account, err := repo.GetAccountByPublicAddress(address)
+		assert.NoError(t, err)
+		assert.Equal(t, address, account.PublicAddress)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("GetAccountByPublicAddress_NotFound", func(t *testing.T) {
+		db, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("An error '%s' was not expected when opening a stub database connection", err)
+		}
+		defer db.Close()
+
+		gormDB, err := gorm.Open(postgres.New(postgres.Config{Conn: db}), &gorm.Config{})
+		if err != nil {
+			panic("Failed to connect to database")
+		}
+
+		repo := repositories.NewGormAccountRepository(gormDB)
+
+		address := "nonexistent_address"
+		mock.ExpectQuery(`SELECT \* FROM "account_entities" WHERE public_address = \$1 AND "account_entities"\."deleted_at" IS NULL ORDER BY "account_entities"\."id" LIMIT \$2`).
+			WithArgs(address, 1).
+			WillReturnError(gorm.ErrRecordNotFound)
+
+		account, err := repo.GetAccountByPublicAddress(address)
+		assert.Equal(t, entities.ErrNotFound, err)
+		assert.Equal(t, &entities.AccountEntity{}, account)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("GetAccountByPublicAddress_DatabaseError", func(t *testing.T) {
+		db, mock, err := sqlmock.New()
+		if err != nil {
+			t.Fatalf("An error '%s' was not expected when opening a stub database connection", err)
+		}
+		defer db.Close()
+
+		gormDB, err := gorm.Open(postgres.New(postgres.Config{Conn: db}), &gorm.Config{})
+		if err != nil {
+			panic("Failed to connect to database")
+		}
+
+		repo := repositories.NewGormAccountRepository(gormDB)
+
+		address := "error_address"
+		mock.ExpectQuery(`SELECT \* FROM "account_entities" WHERE public_address = \$1 AND "account_entities"\."deleted_at" IS NULL ORDER BY "account_entities"\."id" LIMIT \$2`).
+			WithArgs(address, 1).
+			WillReturnError(gorm.ErrInvalidData)
+
+		account, err := repo.GetAccountByPublicAddress(address)
+		assert.Equal(t, entities.ErrInternal, err)
+		assert.Equal(t, &entities.AccountEntity{}, account)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+}
