@@ -36,6 +36,14 @@ func NewAccountService(accountRepo repositories.AccountRepository, balanceRepo r
 
 func (s *accountService) CreateAccount(ctx context.Context, req request.CreateAccountRequest) (*entities.AccountEntity, error) {
 
+	account, err := s.accountRepo.GetAccountByPublicAddress(req.PublicAddress)
+	if err == nil && account.ID != 0 {
+		return account, nil
+	} else if err != nil && !errors.Is(err, entities.ErrNotFound) {
+		msg := utils.FormatValidationError(err)
+		return &entities.AccountEntity{}, entities.NewAppError(entities.ErrTypeInternal, msg, err)
+	}
+
 	result, err := s.uowRepo.Execute(ctx, func(ctx context.Context) (any, error) {
 		account := &entities.AccountEntity{
 			PublicAddress: req.PublicAddress,

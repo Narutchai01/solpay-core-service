@@ -54,3 +54,11 @@ func (r *BalanceRepository) GetBalanceByID(balanceID int) (*entities.BalanceEnti
 	}
 	return &balance, nil
 }
+
+func (r *BalanceRepository) UpdateBalance(txCtx context.Context, data *entities.BalanceEntity) error {
+	db := db.GetTx(txCtx, r.db)
+	if err := db.Save(&data).Error; err != nil {
+		return err
+	}
+	return nil
+}

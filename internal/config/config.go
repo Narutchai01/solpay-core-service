@@ -9,14 +9,16 @@ import (
 )
 
 type Config struct {
-	DBHost      string
-	DBPort      string
-	DBUser      string
-	DBPassword  string
-	DBName      string
-	APPPort     string
-	TimeZone    string
-	Environment string
+	DBHost               string
+	DBPort               string
+	DBUser               string
+	DBPassword           string
+	DBName               string
+	APPPort              string
+	TimeZone             string
+	Environment          string
+	SECRET_JWT           string
+	JWT_EXPIRATION_HOURS string
 }
 
 func GetEnv(key string, fallback ...string) string {
@@ -37,13 +39,15 @@ func LoadConfig() *Config {
 		log.Println("Note: .env file not found. Using system environment variables instead.")
 	}
 	return &Config{
-		DBHost:      GetEnv("DB_HOST"),
-		DBPort:      GetEnv("DB_PORT"),
-		DBUser:      GetEnv("DB_USER"),
-		DBPassword:  GetEnv("DB_PASSWORD"),
-		DBName:      GetEnv("DB_NAME"),
-		APPPort:     GetEnv("APP_PORT", "8080"),
-		TimeZone:    GetEnv("TIMEZONE", "Asia/Bangkok"),
-		Environment: GetEnv("ENVIRONMENT", "development"),
+		DBHost:               GetEnv("DB_HOST"),
+		DBPort:               GetEnv("DB_PORT"),
+		DBUser:               GetEnv("DB_USER"),
+		DBPassword:           GetEnv("DB_PASSWORD"),
+		DBName:               GetEnv("DB_NAME"),
+		APPPort:              GetEnv("APP_PORT", "8080"),
+		TimeZone:             GetEnv("TIMEZONE", "Asia/Bangkok"),
+		Environment:          GetEnv("ENVIRONMENT", "development"),
+		SECRET_JWT:           GetEnv("SECRET_JWT"),
+		JWT_EXPIRATION_HOURS: GetEnv("JWT_EXPIRATION_HOURS", "72"),
 	}
 }
