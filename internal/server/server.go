@@ -3,6 +3,7 @@ package server
 import (
 	"log"
 
+	"github.com/Narutchai01/solpay-core-service/internal/core/websocket"
 	"github.com/Narutchai01/solpay-core-service/internal/db"
 	"github.com/Narutchai01/solpay-core-service/internal/routes"
 	"github.com/Narutchai01/solpay-core-service/internal/utils"
@@ -38,6 +39,10 @@ func (s *Server) Start() error {
 	s.App.Get("/", func(c *fiber.Ctx) error {
 		return utils.HandleResponse(c, nil, nil, "Server is running")
 	})
+
+	hub := websocket.NewHub()
+	go hub.Run()
+	routes.SetupWebSocketRoutes(s.App, hub)
 
 	db, err := db.ConnectDB()
 	if err != nil {
