@@ -31,4 +31,8 @@ func RoutesConfig(app *fiber.App, db *gorm.DB) {
 	balanceGroup := v1.Group("/balances")
 	balanceRouteConfig := NewBalanceRouteConfig(balanceGroup, db, validate)
 	balanceRouteConfig.Setup()
+
+	transactionGroup := v1.Group("/transactions")
+	transactionRouteConfig := NewTransactionRouteConfig(transactionGroup, db, validate)
+	transactionRouteConfig.Setup()
 }

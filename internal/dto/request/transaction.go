@@ -1,11 +1,16 @@
 package request
 
 type CreateTransactionRequest struct {
-	AccountID  uint   `json:"account_id" validate:"required"`
-	CategoryID uint   `json:"category_id" validate:"required"`
-	Type       string `json:"type" validate:"required"`
-	Status     string `json:"status" validate:"required"`
-	THBAmount  int64  `json:"thb_amount" validate:"required,min=0"`
-	USDTAmount int64  `json:"usdt_amount" validate:"required,min=0"`
-	Fee        int64  `json:"fee"`
+	TransactionType string `json:"transaction_type" validate:"required,oneof=top_up transaction_onchain transaction_offchain"`
+
+	THBAmount  float64 `json:"thb_amount" validate:"min=0"`
+	USDTAmount float64 `json:"usdt_amount" validate:"min=0"`
+
+	Fee float64 `json:"fee" validate:"min=0"`
+
+	PromptPayID *string `json:"propmtpayID"`
+
+	FromAddress *string `json:"from_address"`
+
+	TxHash *string `json:"tx_hash"`
 }

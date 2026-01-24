@@ -7,5 +7,5 @@ import (
 )
 
 type TransactionRepository interface {
-	CreateTransaction(txCtx context.Context, data *entities.TransactionEntity) error
+	CreateTransaction(txCtx context.Context, transactionData *entities.TransactionEntity, txOnChian *entities.TransactionOnChain, txOffChain *entities.TransactionOffChain) error
 }
