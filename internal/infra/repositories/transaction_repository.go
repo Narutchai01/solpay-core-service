@@ -40,3 +40,11 @@ func (r *TransactionRepository) CreateTransactionOffChain(txCtx context.Context,
 	}
 	return nil
 }
+
+func (r *TransactionRepository) UpdateTransactionStatus(txCtx context.Context, transactionUUID string, status string) error {
+	db := db.GetTx(txCtx, r.db)
+	if err := db.Model(&entities.TransactionEntity{}).Where("transaction_uuid = ?", transactionUUID).Update("status", status).Error; err != nil {
+		return err
+	}
+	return nil
+}
