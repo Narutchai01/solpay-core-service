@@ -25,7 +25,8 @@ func NewTransactionRouteConfig(route fiber.Router, db *gorm.DB, validate *valida
 
 func (trc *TransactionRouteConfig) Setup() {
 	transactionRepository := repositories.NewGormTransactionRepository(trc.db)
-	transactionService := services.NewTransactionService(transactionRepository)
+	uowRepository := repositories.NewSqlUnitOfWork(trc.db)
+	transactionService := services.NewTransactionService(transactionRepository, uowRepository)
 	transactionHandler := handler.NewTransactionHandler(transactionService)
 
 	trc.route.Post("/", transactionHandler.CreateTransaction)
