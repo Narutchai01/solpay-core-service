@@ -24,3 +24,19 @@ func (r *TransactionRepository) CreateTransaction(txCtx context.Context, data *e
 	}
 	return nil
 }
+
+func (r *TransactionRepository) CreateTransactionOnChain(txCtx context.Context, data *entities.TransactionOnChain) error {
+	db := db.GetTx(txCtx, r.db)
+	if err := db.Create(&data).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *TransactionRepository) CreateTransactionOffChain(txCtx context.Context, data *entities.TransactionOffChain) error {
+	db := db.GetTx(txCtx, r.db)
+	if err := db.Create(&data).Error; err != nil {
+		return err
+	}
+	return nil
+}
