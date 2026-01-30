@@ -9,7 +9,8 @@ type TransactionEntity struct {
 	gorm.Model
 	TransactionUUID     uuid.UUID            `json:"transaction_uuid" gorm:"not null;uniqueIndex;type:uuid"`
 	AccountID           uint                 `json:"account_id" gorm:"not null;index"`
-	TransactionType     string               `json:"category_id" gorm:"not null;"`
+	CategoryID          string               `json:"category_id" gorm:"not null;"`
+	TransactionType     string               `json:"transaction_type" gorm:"not null;"`
 	Status              string               `json:"status" gorm:"not null;default:'pending'"`
 	THBAmount           float64              `json:"thb_amount" gorm:"not null;default:0"`
 	USDTAmount          float64              `json:"usdt_amount" gorm:"not null;default:0"`

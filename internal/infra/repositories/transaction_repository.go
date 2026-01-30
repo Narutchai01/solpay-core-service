@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"errors"
 
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports/repositories"
 	"github.com/Narutchai01/solpay-core-service/internal/db"
@@ -47,4 +48,15 @@ func (r *TransactionRepository) UpdateTransactionStatus(txCtx context.Context, t
 		return err
 	}
 	return nil
+}
+
+func (r *TransactionRepository) GetTransactionByID(transactionID int) (*entities.TransactionEntity, error) {
+	var transaction entities.TransactionEntity
+	if err := r.db.First(&transaction, transactionID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return &entities.TransactionEntity{}, entities.ErrNotFound
+		}
+		return &entities.TransactionEntity{}, entities.ErrInternal
+	}
+	return &transaction, nil
 }

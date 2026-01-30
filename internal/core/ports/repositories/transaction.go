@@ -11,4 +11,5 @@ type TransactionRepository interface {
 	CreateTransactionOnChain(txCtx context.Context, data *entities.TransactionOnChain) error
 	CreateTransactionOffChain(txCtx context.Context, data *entities.TransactionOffChain) error
 	UpdateTransactionStatus(txCtx context.Context, transactionUUID string, status string) error
+	GetTransactionByID(id int) (*entities.TransactionEntity, error)
 }
