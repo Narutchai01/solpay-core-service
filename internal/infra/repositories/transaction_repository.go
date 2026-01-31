@@ -50,6 +50,16 @@ func (r *TransactionRepository) UpdateTransactionStatus(txCtx context.Context, t
 	return nil
 }
 
+func (r *TransactionRepository) GetTransactionByAccountID(accountID int) ([]entities.TransactionEntity, error) {
+	var transactions []entities.TransactionEntity
+	if err := r.db.Where("account_id = ?", accountID).Find(&transactions).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return []entities.TransactionEntity{}, entities.ErrNotFound
+		}
+	}
+	return transactions, nil
+}
+
 func (r *TransactionRepository) GetTransactionByID(transactionID int) (*entities.TransactionEntity, error) {
 	var transaction entities.TransactionEntity
 	if err := r.db.First(&transaction, transactionID).Error; err != nil {
