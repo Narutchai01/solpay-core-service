@@ -12,6 +12,7 @@ import (
 
 type TransactionService interface {
 	CreateTransaction(ctx context.Context, req request.CreateTransactionRequest) (*entities.TransactionEntity, error)
+	GetTransactionByID(id int) (*entities.TransactionEntity, error)
 }
 
 type transactionService struct {
@@ -107,4 +108,15 @@ func (s *transactionService) createTransactionOffChain(ctx context.Context, req 
 		return err
 	}
 	return nil
+}
+
+func (s *transactionService) GetTransactionByID(id int) (*entities.TransactionEntity, error) {
+	transaction, err := s.transactionRepo.GetTransactionByID(id)
+	if err != nil {
+		if errors.Is(err, entities.ErrNotFound) {
+			return &entities.TransactionEntity{}, entities.NewAppError(entities.ErrTypeNotFound, "Transaction not found", err)
+		}
+		return &entities.TransactionEntity{}, entities.NewAppError(entities.ErrTypeInternal, "Failed to get transaction", err)
+	}
+	return transaction, nil
 }
