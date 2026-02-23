@@ -19,6 +19,7 @@ type Config struct {
 	Environment          string
 	SECRET_JWT           string
 	JWT_EXPIRATION_HOURS string
+	RABBITMQ_URL         string
 }
 
 func GetEnv(key string, fallback ...string) string {
@@ -49,5 +50,6 @@ func LoadConfig() *Config {
 		Environment:          GetEnv("ENVIRONMENT", "development"),
 		SECRET_JWT:           GetEnv("SECRET_JWT"),
 		JWT_EXPIRATION_HOURS: GetEnv("JWT_EXPIRATION_HOURS", "72"),
+		RABBITMQ_URL:         GetEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/"),
 	}
 }
