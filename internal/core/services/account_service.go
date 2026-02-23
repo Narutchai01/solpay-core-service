@@ -47,7 +47,6 @@ func (s *accountService) CreateAccount(ctx context.Context, req request.CreateAc
 	result, err := s.uowRepo.Execute(ctx, func(ctx context.Context) (any, error) {
 		account := &entities.AccountEntity{
 			PublicAddress: req.PublicAddress,
-			KycToken:      &req.KycToken,
 		}
 
 		if err := s.accountRepo.CreateAccount(ctx, account); err != nil {
