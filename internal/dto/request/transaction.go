@@ -10,7 +10,5 @@ type CreateTransactionRequest struct {
 
 	PromptPayID *string `json:"propmtpayID"`
 
-	FromAddress *string `json:"from_address"`
-
 	TxHash *string `json:"tx_hash"`
 }

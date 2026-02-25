@@ -50,6 +50,6 @@ func LoadConfig() *Config {
 		Environment:          GetEnv("ENVIRONMENT", "development"),
 		SECRET_JWT:           GetEnv("SECRET_JWT"),
 		JWT_EXPIRATION_HOURS: GetEnv("JWT_EXPIRATION_HOURS", "72"),
-		RABBITMQ_URL:         GetEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/"),
+		RABBITMQ_URL:         GetEnv("MQ_URL", "amqp://guest:guest@localhost:5672/"),
 	}
 }

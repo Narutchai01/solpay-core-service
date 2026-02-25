@@ -52,12 +52,12 @@ func (s *Server) Start() error {
 		log.Fatalf("Error connecting to database: %v", err)
 	}
 
-	_, err = rabbitmq.NewRabbitMQ(s.RABBITMQ_URL)
+	channelWrapper, err := rabbitmq.NewRabbitMQ(s.RABBITMQ_URL)
 	if err != nil {
 		log.Fatalf("Error connecting to RabbitMQ: %v", err)
 	}
 
-	routes.RoutesConfig(s.App, db)
+	routes.RoutesConfig(s.App, db, channelWrapper.Channel)
 
 	return s.App.Listen(":" + s.Port)
 }

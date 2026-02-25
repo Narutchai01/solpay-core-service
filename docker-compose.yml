@@ -37,6 +37,13 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: ${DB_NAME}
       APP_PORT: ${APP_PORT}
+      MQ_HOST: solpayg-rabbitmq
+      MQ_PORT: ${MQ_PORT}
+      MQ_USER: ${MQ_USER}
+      MQ_PASSWORD: ${MQ_PASSWORD}
+      MQ_VHOST: ${MQ_VHOST}
+      MQ_URL: amqp://${MQ_USER}:${MQ_PASSWORD}@solpayg-rabbitmq:${MQ_PORT}/${MQ_VHOST}
+
     develop:
       watch:
         - action: sync
@@ -63,6 +70,7 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: ${MQ_USER:-guest}
       RABBITMQ_DEFAULT_PASS: ${MQ_PASSWORD:-guest}
+      RABBITMQ_DEFAULT_VHOST: ${MQ_VHOST:-/}
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
       interval: 10s

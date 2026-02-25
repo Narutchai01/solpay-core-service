@@ -47,7 +47,7 @@ func (s *transactionService) CreateTransaction(ctx context.Context, req request.
 			return nil, err
 		}
 
-		err := s.handleTransactionType(ctx, req, genreateUUID)
+		err := s.handleCreateTransactionType(ctx, req, genreateUUID)
 		if err != nil {
 			return nil, err
 		}
@@ -62,7 +62,7 @@ func (s *transactionService) CreateTransaction(ctx context.Context, req request.
 	return result.(*entities.TransactionEntity), nil
 }
 
-func (s *transactionService) handleTransactionType(ctx context.Context, req request.CreateTransactionRequest, txId uuid.UUID) error {
+func (s *transactionService) handleCreateTransactionType(ctx context.Context, req request.CreateTransactionRequest, txId uuid.UUID) error {
 	switch req.TransactionType {
 	case "top_up":
 		return s.createTransactionOnChain(ctx, req, txId)
@@ -80,13 +80,12 @@ func (s *transactionService) handleTransactionType(ctx context.Context, req requ
 }
 
 func (s *transactionService) createTransactionOnChain(ctx context.Context, req request.CreateTransactionRequest, txId uuid.UUID) error {
-	if req.TxHash == nil && req.FromAddress == nil {
+	if req.TxHash == nil {
 		return errors.New("onchain require")
 	}
 	transactionOnChain := &entities.TransactionOnChain{
 		TransactionID: txId,
 		TxHash:        *req.TxHash,
-		FromAddress:   *req.FromAddress,
 	}
 	err := s.transactionRepo.CreateTransactionOnChain(ctx, transactionOnChain)
 	if err != nil {
