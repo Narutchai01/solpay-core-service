@@ -7,6 +7,8 @@ import (
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports/repositories"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
+	"github.com/Narutchai01/solpay-core-service/internal/infra/rabbitmq"
+	"github.com/Narutchai01/solpay-core-service/internal/models"
 	"github.com/google/uuid"
 )
 
@@ -16,14 +18,16 @@ type TransactionService interface {
 }
 
 type transactionService struct {
-	transactionRepo repositories.TransactionRepository
-	uowRepo         repositories.UnitOfWork
+	transactionRepo  repositories.TransactionRepository
+	uowRepo          repositories.UnitOfWork
+	rabbitMQProducer rabbitmq.ProducerInterface
 }
 
-func NewTransactionService(transactionRepo repositories.TransactionRepository, uowRepo repositories.UnitOfWork) TransactionService {
+func NewTransactionService(transactionRepo repositories.TransactionRepository, uowRepo repositories.UnitOfWork, rabbitMQProducer rabbitmq.ProducerInterface) TransactionService {
 	return &transactionService{
-		transactionRepo: transactionRepo,
-		uowRepo:         uowRepo,
+		transactionRepo:  transactionRepo,
+		uowRepo:          uowRepo,
+		rabbitMQProducer: rabbitMQProducer,
 	}
 }
 
@@ -57,6 +61,14 @@ func (s *transactionService) CreateTransaction(ctx context.Context, req request.
 
 	if err != nil {
 		return nil, err
+	}
+
+	switch req.TransactionType {
+	case "top_up":
+		err := s.handleMqBlockchainTransaction(result.(*entities.TransactionEntity).TransactionUUID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return result.(*entities.TransactionEntity), nil
@@ -118,4 +130,29 @@ func (s *transactionService) GetTransactionByID(id int) (*entities.TransactionEn
 		return &entities.TransactionEntity{}, entities.NewAppError(entities.ErrTypeInternal, "Failed to get transaction", err)
 	}
 	return transaction, nil
+}
+
+func (s *transactionService) handleMqBlockchainTransaction(txUUID uuid.UUID) error {
+
+	transaction, err := s.transactionRepo.GetTransactionByUUID(txUUID)
+	if err != nil {
+		return err
+	}
+
+	metaData := models.MetaDataSolana{
+		Transaction_type: transaction.TransactionType,
+		Amount_THB:       int(transaction.THBAmount),
+		Amount_USDC:      int(transaction.USDTAmount),
+		AccountID:        int(transaction.AccountID),
+	}
+
+	solanaTxMessage := models.SolanaTxMessage{
+		TxID:     transaction.TransactionUUID.String(),
+		Base64Tx: transaction.TransactionOnChain.TxHash,
+		MetaData: metaData,
+	}
+
+	s.rabbitMQProducer.SummitSolanaTx("solana-worker.tx.submit", solanaTxMessage)
+
+	return nil
 }

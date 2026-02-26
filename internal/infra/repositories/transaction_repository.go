@@ -74,7 +74,7 @@ func (r *TransactionRepository) GetTransactionByID(transactionID int) (*entities
 
 func (r *TransactionRepository) GetTransactionByUUID(txUUID uuid.UUID) (*entities.TransactionEntity, error) {
 	var transaction entities.TransactionEntity
-	if err := r.db.Where("transaction_uuid = ?", txUUID.String()).First(&transaction).Error; err != nil {
+	if err := r.db.Preload("TransactionOnChain").Preload("TransactionOffChain").Where("transaction_uuid = ?", txUUID.String()).First(&transaction).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &entities.TransactionEntity{}, entities.ErrNotFound
 		}

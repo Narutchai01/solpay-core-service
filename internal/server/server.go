@@ -57,6 +57,8 @@ func (s *Server) Start() error {
 		log.Fatalf("Error connecting to RabbitMQ: %v", err)
 	}
 
+	defer channelWrapper.Close()
+
 	routes.RoutesConfig(s.App, db, channelWrapper.Channel)
 
 	return s.App.Listen(":" + s.Port)

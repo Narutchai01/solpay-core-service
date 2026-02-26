@@ -1,10 +1,10 @@
 package models
 
 type MetaDataSolana struct {
-	Type        string `json:"type"`
-	Amount_THB  int    `json:"amount_thb"`
-	Amount_USDC int    `json:"amount_usdc"`
-	AccountID   int    `json:"account_id"`
+	Transaction_type string `json:"transaction_type"`
+	Amount_THB       int    `json:"amount_thb"`
+	Amount_USDC      int    `json:"amount_usdc"`
+	AccountID        int    `json:"account_id"`
 }
 
 type SolanaTxMessage struct {
