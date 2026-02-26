@@ -9,7 +9,7 @@ type TransactionEntity struct {
 	gorm.Model
 	TransactionUUID     uuid.UUID            `json:"transaction_uuid" gorm:"not null;uniqueIndex;type:uuid"`
 	AccountID           uint                 `json:"account_id" gorm:"not null;index"`
-	CategoryID          string               `json:"category_id" gorm:"not null;"`
+	CategoryID          string               `json:"category_id" gorm:"default:null;"`
 	TransactionType     string               `json:"transaction_type" gorm:"not null;"`
 	Status              string               `json:"status" gorm:"not null;default:'pending'"`
 	THBAmount           float64              `json:"thb_amount" gorm:"not null;default:0"`
@@ -24,7 +24,6 @@ type TransactionOnChain struct {
 	TransactionID uuid.UUID          `json:"transaction_id" gorm:"type:uuid;not null;index"`
 	Transaction   *TransactionEntity `json:"transaction,omitempty" gorm:"foreignKey:TransactionID;references:TransactionUUID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	TxHash        string             `json:"tx_hash" gorm:"not null;uniqueIndex"`
-	FromAddress   string             `json:"from_address" gorm:"not null"`
 }
 
 type TransactionOffChain struct {

@@ -29,7 +29,7 @@ func NewRabbitMQ(url string) (*RabbitMQ, error) {
 		return nil, fmt.Errorf("failed to open a channel: %w", err)
 	}
 
-	log.Println("✅ Successfully connected to RabbitMQ")
+	log.Println("🐰 Successfully connected to RabbitMQ ✅")
 
 	return &RabbitMQ{
 		Conn:    conn,

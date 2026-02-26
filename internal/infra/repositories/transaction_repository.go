@@ -7,6 +7,7 @@ import (
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports/repositories"
 	"github.com/Narutchai01/solpay-core-service/internal/db"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -63,6 +64,17 @@ func (r *TransactionRepository) GetTransactionByAccountID(accountID int) ([]enti
 func (r *TransactionRepository) GetTransactionByID(transactionID int) (*entities.TransactionEntity, error) {
 	var transaction entities.TransactionEntity
 	if err := r.db.First(&transaction, transactionID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return &entities.TransactionEntity{}, entities.ErrNotFound
+		}
+		return &entities.TransactionEntity{}, entities.ErrInternal
+	}
+	return &transaction, nil
+}
+
+func (r *TransactionRepository) GetTransactionByUUID(txUUID uuid.UUID) (*entities.TransactionEntity, error) {
+	var transaction entities.TransactionEntity
+	if err := r.db.Preload("TransactionOnChain").Preload("TransactionOffChain").Where("transaction_uuid = ?", txUUID.String()).First(&transaction).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &entities.TransactionEntity{}, entities.ErrNotFound
 		}
