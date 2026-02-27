@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"github.com/Narutchai01/solpay-core-service/internal/core/websocket"
+	"github.com/Narutchai01/solpay-core-service/internal/websocket"
 	firberws "github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 )

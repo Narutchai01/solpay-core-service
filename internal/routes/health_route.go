@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"github.com/Narutchai01/solpay-core-service/internal/core/handler"
+	"github.com/Narutchai01/solpay-core-service/internal/handler"
 	"github.com/gofiber/fiber/v2"
 )
 
