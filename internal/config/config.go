@@ -9,17 +9,19 @@ import (
 )
 
 type Config struct {
-	DBHost               string
-	DBPort               string
-	DBUser               string
-	DBPassword           string
-	DBName               string
-	APPPort              string
-	TimeZone             string
-	Environment          string
-	SECRET_JWT           string
-	JWT_EXPIRATION_HOURS string
-	RABBITMQ_URL         string
+	DBHost                         string
+	DBPort                         string
+	DBUser                         string
+	DBPassword                     string
+	DBName                         string
+	APPPort                        string
+	TimeZone                       string
+	Environment                    string
+	SECRET_JWT                     string
+	JWT_EXPIRATION_HOURS           string
+	RABBITMQ_URL                   string
+	SOLANA_WORK_QUEUE              string
+	TRANSACTION_ORCHESTRATOR_QUEUE string
 }
 
 func GetEnv(key string, fallback ...string) string {
@@ -40,16 +42,18 @@ func LoadConfig() *Config {
 		log.Println("Note: .env file not found. Using system environment variables instead.")
 	}
 	return &Config{
-		DBHost:               GetEnv("DB_HOST"),
-		DBPort:               GetEnv("DB_PORT"),
-		DBUser:               GetEnv("DB_USER"),
-		DBPassword:           GetEnv("DB_PASSWORD"),
-		DBName:               GetEnv("DB_NAME"),
-		APPPort:              GetEnv("APP_PORT", "8080"),
-		TimeZone:             GetEnv("TIMEZONE", "Asia/Bangkok"),
-		Environment:          GetEnv("ENVIRONMENT", "development"),
-		SECRET_JWT:           GetEnv("SECRET_JWT"),
-		JWT_EXPIRATION_HOURS: GetEnv("JWT_EXPIRATION_HOURS", "72"),
-		RABBITMQ_URL:         GetEnv("MQ_URL", "amqp://guest:guest@localhost:5672/"),
+		DBHost:                         GetEnv("DB_HOST"),
+		DBPort:                         GetEnv("DB_PORT"),
+		DBUser:                         GetEnv("DB_USER"),
+		DBPassword:                     GetEnv("DB_PASSWORD"),
+		DBName:                         GetEnv("DB_NAME"),
+		APPPort:                        GetEnv("APP_PORT", "8080"),
+		TimeZone:                       GetEnv("TIMEZONE", "Asia/Bangkok"),
+		Environment:                    GetEnv("ENVIRONMENT", "development"),
+		SECRET_JWT:                     GetEnv("SECRET_JWT"),
+		JWT_EXPIRATION_HOURS:           GetEnv("JWT_EXPIRATION_HOURS", "72"),
+		RABBITMQ_URL:                   GetEnv("MQ_URL", "amqp://guest:guest@localhost:5672/"),
+		SOLANA_WORK_QUEUE:              GetEnv("SOLANA_WORK_QUEUE", "solana-worker.tx.submit"),
+		TRANSACTION_ORCHESTRATOR_QUEUE: GetEnv("CORE_TRANSACTION_QUEUE", "core.transaction.status.update"),
 	}
 }
