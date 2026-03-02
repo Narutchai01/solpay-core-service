@@ -2,12 +2,13 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
+	"github.com/Narutchai01/solpay-core-service/internal/config"
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
-	"github.com/Narutchai01/solpay-core-service/internal/infra/rabbitmq"
 	"github.com/Narutchai01/solpay-core-service/internal/models"
 	"github.com/google/uuid"
 )
@@ -18,16 +19,16 @@ type TransactionService interface {
 }
 
 type transactionService struct {
-	transactionRepo  ports.TransactionRepository
-	uowRepo          ports.UnitOfWork
-	rabbitMQProducer rabbitmq.ProducerInterface
+	transactionRepo ports.TransactionRepository
+	uowRepo         ports.UnitOfWork
+	publisher       ports.Publisher
 }
 
-func NewTransactionService(transactionRepo ports.TransactionRepository, uowRepo ports.UnitOfWork, rabbitMQProducer rabbitmq.ProducerInterface) TransactionService {
+func NewTransactionService(transactionRepo ports.TransactionRepository, uowRepo ports.UnitOfWork, publisher ports.Publisher) TransactionService {
 	return &transactionService{
-		transactionRepo:  transactionRepo,
-		uowRepo:          uowRepo,
-		rabbitMQProducer: rabbitMQProducer,
+		transactionRepo: transactionRepo,
+		uowRepo:         uowRepo,
+		publisher:       publisher,
 	}
 }
 
@@ -134,6 +135,8 @@ func (s *transactionService) GetTransactionByID(id int) (*entities.TransactionEn
 
 func (s *transactionService) handleMqBlockchainTransaction(txUUID uuid.UUID) error {
 
+	cfg := config.LoadConfig()
+
 	transaction, err := s.transactionRepo.GetTransactionByUUID(txUUID)
 	if err != nil {
 		return err
@@ -152,7 +155,12 @@ func (s *transactionService) handleMqBlockchainTransaction(txUUID uuid.UUID) err
 		MetaData: metaData,
 	}
 
-	s.rabbitMQProducer.SummitSolanaTx("solana-worker.tx.submit", solanaTxMessage)
+	jsonMessage, err := json.Marshal(solanaTxMessage)
+	if err != nil {
+		return err
+	}
+
+	s.publisher.Publish(cfg.SOLANA_WORK_QUEUE, jsonMessage)
 
 	return nil
 }

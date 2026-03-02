@@ -17,9 +17,10 @@ type Server struct {
 	Port         string
 	TimeZone     string
 	RABBITMQ_URL string
+	QueueConfig  []rabbitmq.QueueConfig
 }
 
-func New(port string, timeZone string, rabbitMQURL string) *Server {
+func New(port string, timeZone string, rabbitMQURL string, queueConfig []rabbitmq.QueueConfig) *Server {
 	app := fiber.New(fiber.Config{
 		AppName: "Solpay core service",
 	})
@@ -29,6 +30,7 @@ func New(port string, timeZone string, rabbitMQURL string) *Server {
 		Port:         port,
 		TimeZone:     timeZone,
 		RABBITMQ_URL: rabbitMQURL,
+		QueueConfig:  queueConfig,
 	}
 }
 
@@ -58,6 +60,11 @@ func (s *Server) Start() error {
 	}
 
 	defer channelWrapper.Close()
+
+	err = rabbitmq.SetupQueues(channelWrapper.Channel, s.QueueConfig)
+	if err != nil {
+		log.Fatalf("Error setting up RabbitMQ queues: %v", err)
+	}
 
 	routes.RoutesConfig(s.App, db, channelWrapper.Channel)
 
