@@ -5,7 +5,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/Narutchai01/solpay-core-service/internal/core/ports/repositories"
+	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
 	"github.com/Narutchai01/solpay-core-service/internal/utils"
@@ -20,13 +20,13 @@ type AccountService interface {
 
 // Note: Implement the AccountService interface
 type accountService struct {
-	accountRepo repositories.AccountRepository
-	balanceRepo repositories.BalanceRepository
-	uowRepo     repositories.UnitOfWork
+	accountRepo ports.AccountRepository
+	balanceRepo ports.BalanceRepository
+	uowRepo     ports.UnitOfWork
 }
 
 // Note: Constructor function for AccountService
-func NewAccountService(accountRepo repositories.AccountRepository, balanceRepo repositories.BalanceRepository, uowRepo repositories.UnitOfWork) AccountService {
+func NewAccountService(accountRepo ports.AccountRepository, balanceRepo ports.BalanceRepository, uowRepo ports.UnitOfWork) AccountService {
 	return &accountService{
 		accountRepo: accountRepo,
 		balanceRepo: balanceRepo,

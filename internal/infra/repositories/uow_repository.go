@@ -3,7 +3,7 @@ package repositories
 import (
 	"context"
 
-	"github.com/Narutchai01/solpay-core-service/internal/core/ports/repositories"
+	repositories "github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"gorm.io/gorm"
 )
 
