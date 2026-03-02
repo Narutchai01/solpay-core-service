@@ -3,11 +3,11 @@ package server
 import (
 	"log"
 
-	"github.com/Narutchai01/solpay-core-service/internal/core/websocket"
 	"github.com/Narutchai01/solpay-core-service/internal/db"
 	"github.com/Narutchai01/solpay-core-service/internal/infra/rabbitmq"
 	"github.com/Narutchai01/solpay-core-service/internal/routes"
 	"github.com/Narutchai01/solpay-core-service/internal/utils"
+	"github.com/Narutchai01/solpay-core-service/internal/websocket"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 )
