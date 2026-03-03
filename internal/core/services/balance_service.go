@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports/repositories"
+	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
 	"github.com/Narutchai01/solpay-core-service/internal/utils"
 )
@@ -12,6 +13,7 @@ import (
 type BalanceService interface {
 	GetBalances(page int, limit int) ([]entities.BalanceEntity, int64, error)
 	GetBalanceByID(id int) (*entities.BalanceEntity, error)
+	UpdateBalance(data *request.UpdateBalanceCommand) error
 }
 
 type balanceService struct {
@@ -69,4 +71,9 @@ func (s *balanceService) GetBalanceByID(id int) (*entities.BalanceEntity, error)
 		return &entities.BalanceEntity{}, entities.NewAppError(entities.ErrTypeInternal, "internal server error", err)
 	}
 	return balance, nil
+}
+
+func (s *balanceService) UpdateBalance(data *request.UpdateBalanceCommand) error {
+
+	return nil
 }
