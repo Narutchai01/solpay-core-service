@@ -66,6 +66,9 @@ func (s *Server) Start() error {
 		log.Fatalf("Error setting up RabbitMQ queues: %v", err)
 	}
 
+	consumerSetup := rabbitmq.NewConsumerSetup(channelWrapper.Channel, db)
+	consumerSetup.Setup()
+
 	routes.RoutesConfig(s.App, db, channelWrapper.Channel)
 
 	return s.App.Listen(":" + s.Port)

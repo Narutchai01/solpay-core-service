@@ -16,6 +16,7 @@ import (
 type TransactionService interface {
 	CreateTransaction(ctx context.Context, req request.CreateTransactionRequest) (*entities.TransactionEntity, error)
 	GetTransactionByID(id int) (*entities.TransactionEntity, error)
+	HandleTransactionProcess(ctx context.Context, msg []byte) error
 }
 
 type transactionService struct {
@@ -161,6 +162,21 @@ func (s *transactionService) handleMqBlockchainTransaction(txUUID uuid.UUID) err
 	}
 
 	s.publisher.Publish(cfg.SOLANA_WORK_QUEUE, jsonMessage)
+
+	return nil
+}
+
+func (s *transactionService) HandleTransactionProcess(ctx context.Context, msg []byte) error {
+	var txMsg entities.TransactionMessage
+	err := json.Unmarshal(msg, &txMsg)
+	if err != nil {
+		return err
+	}
+
+	err = s.transactionRepo.UpdateTransactionStatus(ctx, txMsg.TxID, txMsg.Status)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
