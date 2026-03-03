@@ -1,6 +1,8 @@
 package services
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"sync"
 
@@ -13,7 +15,7 @@ import (
 type BalanceService interface {
 	GetBalances(page int, limit int) ([]entities.BalanceEntity, int64, error)
 	GetBalanceByID(id int) (*entities.BalanceEntity, error)
-	UpdateBalance(data *request.UpdateBalanceCommand) error
+	UpdateBalance(data []byte) error
 }
 
 type balanceService struct {
@@ -73,7 +75,23 @@ func (s *balanceService) GetBalanceByID(id int) (*entities.BalanceEntity, error)
 	return balance, nil
 }
 
-func (s *balanceService) UpdateBalance(data *request.UpdateBalanceCommand) error {
+func (s *balanceService) UpdateBalance(data []byte) error {
+	var cmd request.UpdateBalanceCommand
+	err := json.Unmarshal(data, &cmd)
+	if err != nil {
+		return entities.NewAppError(entities.ErrTypeBadRequest, "invalid request body", err)
+	}
+
+	newBalance := &entities.BalanceEntity{
+		AccountID:  cmd.AccountID,
+		THBAmount:  cmd.THBAmount,
+		USDTAmount: cmd.USDTAmount,
+	}
+
+	err = s.balanceRepo.UpdateBalance(context.Background(), newBalance)
+	if err != nil {
+		return entities.NewAppError(entities.ErrTypeInternal, "failed to update balance", err)
+	}
 
 	return nil
 }
