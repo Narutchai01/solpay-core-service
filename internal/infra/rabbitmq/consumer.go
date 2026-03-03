@@ -39,9 +39,9 @@ func (c *Consumer) TransactionOrchestrator() error {
 
 	for msg := range msgs {
 		log.Printf("Received message from queue: %s", string(msg.Body))
-		err := c.transactionService.HandleTransactionProcess(context.Background(), msg.Body)
+		err := c.transactionService.HandleTransactionUpdate(context.Background(), msg.Body)
 		if err != nil {
-			log.Printf("Failed to handle transaction process: %v", err)
+			log.Printf("Failed to handle transaction update: %v", err)
 		}
 	}
 

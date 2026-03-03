@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log"
 
 	"github.com/Narutchai01/solpay-core-service/internal/config"
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
@@ -16,7 +17,7 @@ import (
 type TransactionService interface {
 	CreateTransaction(ctx context.Context, req request.CreateTransactionRequest) (*entities.TransactionEntity, error)
 	GetTransactionByID(id int) (*entities.TransactionEntity, error)
-	HandleTransactionProcess(ctx context.Context, msg []byte) error
+	HandleTransactionUpdate(ctx context.Context, msg []byte) error
 }
 
 type transactionService struct {
@@ -166,11 +167,26 @@ func (s *transactionService) handleMqBlockchainTransaction(txUUID uuid.UUID) err
 	return nil
 }
 
-func (s *transactionService) HandleTransactionProcess(ctx context.Context, msg []byte) error {
+func (s *transactionService) HandleTransactionUpdate(ctx context.Context, msg []byte) error {
 	var txMsg entities.TransactionMessage
 	err := json.Unmarshal(msg, &txMsg)
 	if err != nil {
 		return err
+	}
+
+	txUUID, err := uuid.Parse(txMsg.TxID)
+	if err != nil {
+		return err
+	}
+
+	tx, err := s.transactionRepo.GetTransactionByUUID(txUUID)
+	if err != nil {
+		return err
+	}
+
+	if tx.Status == txMsg.Status {
+		log.Printf("Transaction %s already has status %s", txMsg.TxID, txMsg.Status)
+		return errors.New("transaction already processed")
 	}
 
 	err = s.transactionRepo.UpdateTransactionStatus(ctx, txMsg.TxID, txMsg.Status)
