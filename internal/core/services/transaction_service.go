@@ -2,12 +2,14 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"log"
 
+	"github.com/Narutchai01/solpay-core-service/internal/config"
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
-	"github.com/Narutchai01/solpay-core-service/internal/infra/rabbitmq"
 	"github.com/Narutchai01/solpay-core-service/internal/models"
 	"github.com/google/uuid"
 )
@@ -15,19 +17,20 @@ import (
 type TransactionService interface {
 	CreateTransaction(ctx context.Context, req request.CreateTransactionRequest) (*entities.TransactionEntity, error)
 	GetTransactionByID(id int) (*entities.TransactionEntity, error)
+	HandleTransactionUpdate(ctx context.Context, msg []byte) error
 }
 
 type transactionService struct {
-	transactionRepo  ports.TransactionRepository
-	uowRepo          ports.UnitOfWork
-	rabbitMQProducer rabbitmq.ProducerInterface
+	transactionRepo ports.TransactionRepository
+	uowRepo         ports.UnitOfWork
+	publisher       ports.Publisher
 }
 
-func NewTransactionService(transactionRepo ports.TransactionRepository, uowRepo ports.UnitOfWork, rabbitMQProducer rabbitmq.ProducerInterface) TransactionService {
+func NewTransactionService(transactionRepo ports.TransactionRepository, uowRepo ports.UnitOfWork, publisher ports.Publisher) TransactionService {
 	return &transactionService{
-		transactionRepo:  transactionRepo,
-		uowRepo:          uowRepo,
-		rabbitMQProducer: rabbitMQProducer,
+		transactionRepo: transactionRepo,
+		uowRepo:         uowRepo,
+		publisher:       publisher,
 	}
 }
 
@@ -134,6 +137,8 @@ func (s *transactionService) GetTransactionByID(id int) (*entities.TransactionEn
 
 func (s *transactionService) handleMqBlockchainTransaction(txUUID uuid.UUID) error {
 
+	cfg := config.LoadConfig()
+
 	transaction, err := s.transactionRepo.GetTransactionByUUID(txUUID)
 	if err != nil {
 		return err
@@ -152,7 +157,42 @@ func (s *transactionService) handleMqBlockchainTransaction(txUUID uuid.UUID) err
 		MetaData: metaData,
 	}
 
-	s.rabbitMQProducer.SummitSolanaTx("solana-worker.tx.submit", solanaTxMessage)
+	jsonMessage, err := json.Marshal(solanaTxMessage)
+	if err != nil {
+		return err
+	}
+
+	s.publisher.Publish(cfg.SOLANA_WORK_QUEUE, jsonMessage)
+
+	return nil
+}
+
+func (s *transactionService) HandleTransactionUpdate(ctx context.Context, msg []byte) error {
+	var txMsg entities.TransactionMessage
+	err := json.Unmarshal(msg, &txMsg)
+	if err != nil {
+		return err
+	}
+
+	txUUID, err := uuid.Parse(txMsg.TxID)
+	if err != nil {
+		return err
+	}
+
+	tx, err := s.transactionRepo.GetTransactionByUUID(txUUID)
+	if err != nil {
+		return err
+	}
+
+	if tx.Status == txMsg.Status {
+		log.Printf("Transaction %s already has status %s", txMsg.TxID, txMsg.Status)
+		return errors.New("transaction already processed")
+	}
+
+	err = s.transactionRepo.UpdateTransactionStatus(ctx, txMsg.TxID, txMsg.Status)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
