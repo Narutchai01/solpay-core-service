@@ -1,10 +1,13 @@
 package services
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"sync"
 
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
+	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
 	"github.com/Narutchai01/solpay-core-service/internal/utils"
 )
@@ -12,6 +15,7 @@ import (
 type BalanceService interface {
 	GetBalances(page int, limit int) ([]entities.BalanceEntity, int64, error)
 	GetBalanceByID(id int) (*entities.BalanceEntity, error)
+	UpdateBalance(data []byte) error
 }
 
 type balanceService struct {
@@ -69,4 +73,25 @@ func (s *balanceService) GetBalanceByID(id int) (*entities.BalanceEntity, error)
 		return &entities.BalanceEntity{}, entities.NewAppError(entities.ErrTypeInternal, "internal server error", err)
 	}
 	return balance, nil
+}
+
+func (s *balanceService) UpdateBalance(data []byte) error {
+	var cmd request.UpdateBalanceCommand
+	err := json.Unmarshal(data, &cmd)
+	if err != nil {
+		return entities.NewAppError(entities.ErrTypeBadRequest, "invalid request body", err)
+	}
+
+	newBalance := &entities.BalanceEntity{
+		AccountID:  cmd.AccountID,
+		THBAmount:  cmd.THBAmount,
+		USDTAmount: cmd.USDTAmount,
+	}
+
+	err = s.balanceRepo.UpdateBalance(context.Background(), newBalance)
+	if err != nil {
+		return entities.NewAppError(entities.ErrTypeInternal, "failed to update balance", err)
+	}
+
+	return nil
 }
