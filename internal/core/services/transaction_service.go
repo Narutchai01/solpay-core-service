@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/Narutchai01/solpay-core-service/internal/core/ports/repositories"
+	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
 	"github.com/Narutchai01/solpay-core-service/internal/infra/rabbitmq"
@@ -18,12 +18,12 @@ type TransactionService interface {
 }
 
 type transactionService struct {
-	transactionRepo  repositories.TransactionRepository
-	uowRepo          repositories.UnitOfWork
+	transactionRepo  ports.TransactionRepository
+	uowRepo          ports.UnitOfWork
 	rabbitMQProducer rabbitmq.ProducerInterface
 }
 
-func NewTransactionService(transactionRepo repositories.TransactionRepository, uowRepo repositories.UnitOfWork, rabbitMQProducer rabbitmq.ProducerInterface) TransactionService {
+func NewTransactionService(transactionRepo ports.TransactionRepository, uowRepo ports.UnitOfWork, rabbitMQProducer rabbitmq.ProducerInterface) TransactionService {
 	return &transactionService{
 		transactionRepo:  transactionRepo,
 		uowRepo:          uowRepo,
