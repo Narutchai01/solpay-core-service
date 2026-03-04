@@ -51,9 +51,9 @@ func (c *Consumer) TransactionOrchestrator() error {
 }
 
 func (c *Consumer) BalanceConsumer() error {
-	cfg := config.LoadConfig().BALANCE_QUEUE
+	cfg := config.LoadConfig()
 	msgs, err := c.ch.Consume(
-		cfg,
+		cfg.BALANCE_QUEUE,
 		"",
 		true,
 		false,

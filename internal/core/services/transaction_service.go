@@ -208,11 +208,12 @@ func (s *transactionService) processStateTransaction(ctx context.Context, tx *en
 
 func (s *transactionService) topUpWorkflow(ctx context.Context, tx *entities.TransactionEntity, event request.TransactionMessage) error {
 
-	cfg := config.LoadConfig().BALANCE_QUEUE
+	log.Printf("Processing top-up workflow for transaction %s with status %s %s", event.TxID, event.Status, event.SourceWorker)
+
+	cfg := config.LoadConfig()
 	switch event.SourceWorker {
 	case "SOLANA":
-		if tx.Status == string(entities.StatusSolanaSuccess) {
-
+		if event.Status == string(entities.StatusSolanaSuccess) {
 			rawMsg := request.UpdateBalanceCommand{
 				TransactionID: tx.TransactionUUID.String(),
 				AccountID:     tx.AccountID,
@@ -225,9 +226,18 @@ func (s *transactionService) topUpWorkflow(ctx context.Context, tx *entities.Tra
 				return err
 			}
 
-			s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, string(entities.StatusBalanceUpdating))
+			err = s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, string(entities.StatusBalanceUpdating))
+			if err != nil {
+				return err
+			}
 
-			s.publisher.Publish(cfg, jsonMessage)
+			s.publisher.Publish(cfg.BALANCE_QUEUE, jsonMessage)
+		} else if event.Status == string(entities.StatusSolanaFailed) {
+			err := s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, string(entities.StatusRefunded))
+			if err != nil {
+				return err
+
+			}
 		}
 		return nil
 	}

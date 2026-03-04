@@ -37,13 +37,13 @@ type TransactionOffChain struct {
 type TransactionStatus string
 
 const (
-	StatusPending         TransactionStatus = "PENDING"          // เริ่มต้น
-	StatusSolanaSubmitted TransactionStatus = "SOLANA_SUBMITTED" // ส่งไป Solana Worker แล้ว
-	StatusSolanaSuccess   TransactionStatus = "SOLANA_SUCCESS"   // Solana ตัดเงินสำเร็จ
-	StatusSolanaFailed    TransactionStatus = "SOLANA_FAILED"    // Solana ตัดเงินไม่ผ่าน
-	StatusBalanceUpdating TransactionStatus = "BALANCE_UPDATING" // กำลังอัปเดตยอดเงิน
-	StatusCompleted       TransactionStatus = "COMPLETED"        // ทุกอย่างสมบูรณ์
-	StatusRefunded        TransactionStatus = "REFUNDED"         // เกิดข้อผิดพลาดและคืนเงินแล้ว
+	StatusPending         TransactionStatus = "PENDING"              // เริ่มต้น
+	StatusSolanaSubmitted TransactionStatus = "SOLANA_SUBMITTED"     // ส่งไป Solana Worker แล้ว
+	StatusSolanaSuccess   TransactionStatus = "BLOCKCHAIN_COMPLETED" // Solana ตัดเงินสำเร็จ
+	StatusSolanaFailed    TransactionStatus = "SOLANA_FAILED"        // Solana ตัดเงินไม่ผ่าน
+	StatusBalanceUpdating TransactionStatus = "BALANCE_UPDATING"     // กำลังอัปเดตยอดเงิน
+	StatusCompleted       TransactionStatus = "COMPLETED"            // ทุกอย่างสมบูรณ์
+	StatusRefunded        TransactionStatus = "REFUNDED"             // เกิดข้อผิดพลาดและคืนเงินแล้ว
 	StatusPaymentSuccess  TransactionStatus = "PAYMENT_SUCCESS"
 	StatusPaymentFailed   TransactionStatus = "PAYMENT_FAILD"
 )
