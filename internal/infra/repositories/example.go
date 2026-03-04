@@ -3,7 +3,7 @@ package repositories
 import (
 	"errors"
 
-	ports "github.com/Narutchai01/solpay-core-service/internal/core/ports/repositories"
+	ports "github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
 	"gorm.io/gorm"
 )

@@ -6,7 +6,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/Narutchai01/solpay-core-service/internal/core/ports/repositories"
+	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
 	"github.com/Narutchai01/solpay-core-service/internal/utils"
@@ -19,12 +19,12 @@ type BalanceService interface {
 }
 
 type balanceService struct {
-	accountRepo repositories.AccountRepository
-	balanceRepo repositories.BalanceRepository
-	uowRepo     repositories.UnitOfWork
+	accountRepo ports.AccountRepository
+	balanceRepo ports.BalanceRepository
+	uowRepo     ports.UnitOfWork
 }
 
-func NewBalanceService(balanceRepo repositories.BalanceRepository, uowRepo repositories.UnitOfWork) BalanceService {
+func NewBalanceService(balanceRepo ports.BalanceRepository, uowRepo ports.UnitOfWork) BalanceService {
 	return &balanceService{
 		balanceRepo: balanceRepo,
 		uowRepo:     uowRepo,

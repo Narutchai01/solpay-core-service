@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/Narutchai01/solpay-core-service/internal/core/ports/repositories"
+	repositories "github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/db"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
 	"github.com/google/uuid"
