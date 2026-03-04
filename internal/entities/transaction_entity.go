@@ -47,8 +47,3 @@ const (
 	StatusPaymentSuccess  TransactionStatus = "PAYMENT_SUCCESS"
 	StatusPaymentFailed   TransactionStatus = "PAYMENT_FAILD"
 )
-
-type TransactionMessage struct {
-	TxID   string `json:"tx_id"`
-	Status string `json:"status"`
-}

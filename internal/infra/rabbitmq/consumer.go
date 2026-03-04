@@ -13,12 +13,14 @@ import (
 type Consumer struct {
 	ch                 *amqp.Channel
 	transactionService services.TransactionService
+	balanceService     services.BalanceService
 }
 
-func NewConsumer(ch *amqp.Channel, transactionService services.TransactionService) ports.Consumer {
+func NewConsumer(ch *amqp.Channel, transactionService services.TransactionService, balanceService services.BalanceService) ports.Consumer {
 	return &Consumer{
 		ch:                 ch,
 		transactionService: transactionService,
+		balanceService:     balanceService,
 	}
 }
 
@@ -42,6 +44,32 @@ func (c *Consumer) TransactionOrchestrator() error {
 		err := c.transactionService.HandleTransactionUpdate(context.Background(), msg.Body)
 		if err != nil {
 			log.Printf("Failed to handle transaction update: %v", err)
+		}
+	}
+
+	return nil
+}
+
+func (c *Consumer) BalanceConsumer() error {
+	cfg := config.LoadConfig().BALANCE_QUEUE
+	msgs, err := c.ch.Consume(
+		cfg,
+		"",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+
+	for msg := range msgs {
+		log.Printf("Received message from balance queue: %s", string(msg.Body))
+		err := c.balanceService.UpdateBalance(msg.Body)
+		if err != nil {
+			log.Printf("Failed to handle balance update: %v", err)
 		}
 	}
 

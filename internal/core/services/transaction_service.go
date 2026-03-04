@@ -168,7 +168,7 @@ func (s *transactionService) handleMqBlockchainTransaction(txUUID uuid.UUID) err
 }
 
 func (s *transactionService) HandleTransactionUpdate(ctx context.Context, msg []byte) error {
-	var txMsg entities.TransactionMessage
+	var txMsg request.TransactionMessage
 	err := json.Unmarshal(msg, &txMsg)
 	if err != nil {
 		return err
@@ -194,5 +194,42 @@ func (s *transactionService) HandleTransactionUpdate(ctx context.Context, msg []
 		return err
 	}
 
+	return s.processStateTransaction(ctx, tx, txMsg)
+}
+
+func (s *transactionService) processStateTransaction(ctx context.Context, tx *entities.TransactionEntity, event request.TransactionMessage) error {
+
+	switch tx.TransactionType {
+	case "top_up":
+		return s.topUpWorkflow(ctx, tx, event)
+	}
+	return nil
+}
+
+func (s *transactionService) topUpWorkflow(ctx context.Context, tx *entities.TransactionEntity, event request.TransactionMessage) error {
+
+	cfg := config.LoadConfig().BALANCE_QUEUE
+	switch event.SourceWorker {
+	case "SOLANA":
+		if tx.Status == string(entities.StatusSolanaSuccess) {
+
+			rawMsg := request.UpdateBalanceCommand{
+				TransactionID: tx.TransactionUUID.String(),
+				AccountID:     tx.AccountID,
+				THBAmount:     int64(tx.THBAmount),
+				USDTAmount:    int64(tx.USDTAmount),
+			}
+
+			jsonMessage, err := json.Marshal(rawMsg)
+			if err != nil {
+				return err
+			}
+
+			s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, string(entities.StatusBalanceUpdating))
+
+			s.publisher.Publish(cfg, jsonMessage)
+		}
+		return nil
+	}
 	return nil
 }

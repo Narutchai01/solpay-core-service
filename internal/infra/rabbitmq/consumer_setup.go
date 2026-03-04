@@ -23,10 +23,12 @@ func (cs *ConsumerSetup) Setup() {
 
 	go func() {
 		transactionRepo := repositories.NewGormTransactionRepository(cs.db)
+		balanceRepo := repositories.NewGormBalanceRepository(cs.db)
 		uowRepo := repositories.NewSqlUnitOfWork(cs.db)
 		Publisher := NewPublisher(cs.channel)
 		transactionService := services.NewTransactionService(transactionRepo, uowRepo, Publisher)
-		consumer := NewConsumer(cs.channel, transactionService)
+		balanceService := services.NewBalanceService(balanceRepo, uowRepo)
+		consumer := NewConsumer(cs.channel, transactionService, balanceService)
 		if err := consumer.TransactionOrchestrator(); err != nil {
 			panic(err)
 		}
