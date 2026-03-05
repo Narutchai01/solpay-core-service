@@ -12,3 +12,9 @@ type CreateTransactionRequest struct {
 
 	TxHash *string `json:"tx_hash"`
 }
+
+type TransactionMessage struct {
+	TxID         string `json:"tx_id"`
+	SourceWorker string `json:"source_worker"`
+	Status       string `json:"status"`
+}

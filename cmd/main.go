@@ -15,6 +15,7 @@ func main() {
 	queueConfig := []rabbitmq.QueueConfig{
 		{Name: cgf.SOLANA_WORK_QUEUE, Durable: true, AutoDelete: false},
 		{Name: cgf.TRANSACTION_ORCHESTRATOR_QUEUE, Durable: true, AutoDelete: false},
+		{Name: cgf.BALANCE_QUEUE, Durable: true, AutoDelete: false},
 	}
 
 	println(fmt.Sprintf("RabbitMQ URL: %s", cgf.RABBITMQ_URL))

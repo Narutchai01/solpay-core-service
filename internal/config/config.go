@@ -22,6 +22,7 @@ type Config struct {
 	RABBITMQ_URL                   string
 	SOLANA_WORK_QUEUE              string
 	TRANSACTION_ORCHESTRATOR_QUEUE string
+	BALANCE_QUEUE                  string
 }
 
 func GetEnv(key string, fallback ...string) string {
@@ -55,5 +56,6 @@ func LoadConfig() *Config {
 		RABBITMQ_URL:                   GetEnv("MQ_URL", "amqp://guest:guest@localhost:5672/"),
 		SOLANA_WORK_QUEUE:              GetEnv("SOLANA_WORK_QUEUE", "solana-worker.tx.submit"),
 		TRANSACTION_ORCHESTRATOR_QUEUE: GetEnv("CORE_TRANSACTION_QUEUE", "core.transaction.status.update"),
+		BALANCE_QUEUE:                  GetEnv("CORE_BALANCE_QUEUE", "core.balance.update"),
 	}
 }
