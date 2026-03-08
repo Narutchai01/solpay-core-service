@@ -10,6 +10,7 @@ type Client struct {
 	Hub  *Hub            // อ้างอิงไปยัง Hub หลัก
 	Conn *websocket.Conn // Connection ของคนนี้
 	Send chan []byte     // ช่องทางส่งข้อความหาคนนี้
+	TxID string          // รหัสธุรกรรมที่คนนี้สนใจ
 }
 
 // ReadPump: รอรับข้อความจาก Browser -> Server
@@ -27,7 +28,6 @@ func (c *Client) ReadPump() {
 			}
 			break
 		}
-		// ได้ข้อความมาแล้ว ส่งเข้า Hub เพื่อกระจายต่อ (Broadcast)
 		c.Hub.Broadcast <- message
 	}
 }

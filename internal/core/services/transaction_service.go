@@ -24,13 +24,15 @@ type transactionService struct {
 	transactionRepo ports.TransactionRepository
 	uowRepo         ports.UnitOfWork
 	publisher       ports.Publisher
+	wsHub           ports.WebSocketPort
 }
 
-func NewTransactionService(transactionRepo ports.TransactionRepository, uowRepo ports.UnitOfWork, publisher ports.Publisher) TransactionService {
+func NewTransactionService(transactionRepo ports.TransactionRepository, uowRepo ports.UnitOfWork, publisher ports.Publisher, wsHub ports.WebSocketPort) TransactionService {
 	return &transactionService{
 		transactionRepo: transactionRepo,
 		uowRepo:         uowRepo,
 		publisher:       publisher,
+		wsHub:           wsHub,
 	}
 }
 
@@ -207,39 +209,61 @@ func (s *transactionService) processStateTransaction(ctx context.Context, tx *en
 }
 
 func (s *transactionService) topUpWorkflow(ctx context.Context, tx *entities.TransactionEntity, event request.TransactionMessage) error {
-
-	log.Printf("Processing top-up workflow for transaction %s with status %s %s", event.TxID, event.Status, event.SourceWorker)
-
 	cfg := config.LoadConfig()
+
 	switch event.SourceWorker {
 	case "SOLANA":
-		if event.Status == string(entities.StatusSolanaSuccess) {
-			rawMsg := request.UpdateBalanceCommand{
-				TransactionID: tx.TransactionUUID.String(),
-				AccountID:     tx.AccountID,
-				THBAmount:     int64(tx.THBAmount),
-				USDTAmount:    int64(tx.USDTAmount),
-			}
+		return s.handleSolanaWorker(ctx, tx, event, cfg)
+	case "BALANCE":
+		return s.handleBalanceWorker(ctx, event)
+	}
 
-			jsonMessage, err := json.Marshal(rawMsg)
-			if err != nil {
-				return err
-			}
+	return nil
+}
 
-			err = s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, string(entities.StatusBalanceUpdating))
-			if err != nil {
-				return err
-			}
-
-			s.publisher.Publish(cfg.BALANCE_QUEUE, jsonMessage)
-		} else if event.Status == string(entities.StatusSolanaFailed) {
-			err := s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, string(entities.StatusRefunded))
-			if err != nil {
-				return err
-
-			}
+func (s *transactionService) handleSolanaWorker(ctx context.Context, tx *entities.TransactionEntity, event request.TransactionMessage, cfg *config.Config) error {
+	switch event.Status {
+	case string(entities.StatusSolanaSuccess):
+		rawMsg := request.UpdateBalanceCommand{
+			TransactionID: tx.TransactionUUID.String(),
+			AccountID:     tx.AccountID,
+			THBAmount:     int64(tx.THBAmount),
+			USDTAmount:    int64(tx.USDTAmount),
 		}
-		return nil
+
+		jsonMessage, err := json.Marshal(rawMsg)
+		if err != nil {
+			return err
+		}
+
+		if err := s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, string(entities.StatusBalanceUpdating)); err != nil {
+			return err
+		}
+
+		s.publisher.Publish(cfg.BALANCE_QUEUE, jsonMessage)
+		s.wsHub.NotifyTransactionStatus(event.TxID, []byte(`{"status":"BALANCE_UPDATING"}`))
+	case string(entities.StatusSolanaFailed):
+		if err := s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, string(entities.StatusRefunded)); err != nil {
+			return err
+		}
+
+		s.wsHub.NotifyTransactionStatus(event.TxID, []byte(`{"status":"FAILED"}`))
+	}
+	return nil
+}
+
+func (s *transactionService) handleBalanceWorker(ctx context.Context, event request.TransactionMessage) error {
+	switch event.Status {
+	case string(entities.StatusBalanceUpdated):
+		if err := s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, string(entities.StatusCompleted)); err != nil {
+			return err
+		}
+		s.wsHub.NotifyTransactionStatus(event.TxID, []byte(`{"status":"COMPLETED"}`))
+	case string(entities.StatusBalanceFailed):
+		if err := s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, string(entities.StatusRefunded)); err != nil {
+			return err
+		}
+		s.wsHub.NotifyTransactionStatus(event.TxID, []byte(`{"status":"REFUNDED"}`))
 	}
 	return nil
 }

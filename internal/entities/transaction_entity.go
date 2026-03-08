@@ -42,6 +42,9 @@ const (
 	StatusSolanaSuccess   TransactionStatus = "BLOCKCHAIN_COMPLETED" // Solana ตัดเงินสำเร็จ
 	StatusSolanaFailed    TransactionStatus = "SOLANA_FAILED"        // Solana ตัดเงินไม่ผ่าน
 	StatusBalanceUpdating TransactionStatus = "BALANCE_UPDATING"     // กำลังอัปเดตยอดเงิน
+	StatusBalanceUpdated  TransactionStatus = "BALANCE_UPDATED"      // อัปเดตยอดเงินเสร็จแล้ว
+	StatusRefunding       TransactionStatus = "REFUNDING"            // กำลังคืนเงิน
+	StatusBalanceFailed   TransactionStatus = "BALANCE_FAILED"       // อัปเดตยอดเงินไม่ผ่าน
 	StatusCompleted       TransactionStatus = "COMPLETED"            // ทุกอย่างสมบูรณ์
 	StatusRefunded        TransactionStatus = "REFUNDED"             // เกิดข้อผิดพลาดและคืนเงินแล้ว
 	StatusPaymentSuccess  TransactionStatus = "PAYMENT_SUCCESS"

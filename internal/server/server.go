@@ -47,12 +47,13 @@ func (s *Server) Start() error {
 
 	hub := websocket.NewHub()
 	go hub.Run()
-	routes.SetupWebSocketRoutes(s.App, hub)
 
 	db, err := db.ConnectDB()
 	if err != nil {
 		log.Fatalf("Error connecting to database: %v", err)
 	}
+
+	routes.SetupWebSocketRoutes(s.App, hub, db)
 
 	channelWrapper, err := rabbitmq.NewRabbitMQ(s.RABBITMQ_URL)
 	if err != nil {
@@ -66,7 +67,7 @@ func (s *Server) Start() error {
 		log.Fatalf("Error setting up RabbitMQ queues: %v", err)
 	}
 
-	consumerSetup := rabbitmq.NewConsumerSetup(channelWrapper.Channel, db)
+	consumerSetup := rabbitmq.NewConsumerSetup(channelWrapper.Channel, db, hub)
 	consumerSetup.Setup()
 
 	routes.RoutesConfig(s.App, db, channelWrapper.Channel)
