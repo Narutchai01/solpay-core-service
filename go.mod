@@ -13,6 +13,8 @@ require (
 	gorm.io/gorm v1.31.1
 )
 
+require github.com/omise/omise-go v1.7.1 // indirect
+
 require (
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/air-verse/air v1.63.5 // indirect
