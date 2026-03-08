@@ -19,7 +19,7 @@ func main() {
 	}
 
 	println(fmt.Sprintf("RabbitMQ URL: %s", cgf.RABBITMQ_URL))
-	server := server.New(cgf.APPPort, cgf.TimeZone, cgf.RABBITMQ_URL, queueConfig)
+	server := server.New(cgf.APPPort, cgf.TimeZone, cgf.RABBITMQ_URL, queueConfig, cgf.OMISE_KEY, cgf.OMISE_SECRET)
 
 	if err := server.Start(); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
