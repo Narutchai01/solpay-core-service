@@ -26,7 +26,7 @@ func NewBalanceRouteConfig(route fiber.Router, db *gorm.DB, validate *validator.
 func (brc *BalanceRouteConfig) Setup() {
 	balanceRepository := repositories.NewGormBalanceRepository(brc.db)
 	uowRepository := repositories.NewSqlUnitOfWork(brc.db)
-	balanceService := services.NewBalanceService(balanceRepository, uowRepository)
+	balanceService := services.NewBalanceService(balanceRepository, uowRepository, nil)
 	balanceHandler := handler.NewBalanceHandler(balanceService)
 
 	brc.route.Get("/", balanceHandler.GetBalancesHandler)

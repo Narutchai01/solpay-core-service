@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log"
 	"sync"
 
+	"github.com/Narutchai01/solpay-core-service/internal/config"
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
@@ -22,12 +24,14 @@ type balanceService struct {
 	accountRepo ports.AccountRepository
 	balanceRepo ports.BalanceRepository
 	uowRepo     ports.UnitOfWork
+	publisher   ports.Publisher
 }
 
-func NewBalanceService(balanceRepo ports.BalanceRepository, uowRepo ports.UnitOfWork) BalanceService {
+func NewBalanceService(balanceRepo ports.BalanceRepository, uowRepo ports.UnitOfWork, publisher ports.Publisher) BalanceService {
 	return &balanceService{
 		balanceRepo: balanceRepo,
 		uowRepo:     uowRepo,
+		publisher:   publisher,
 	}
 }
 
@@ -76,6 +80,8 @@ func (s *balanceService) GetBalanceByID(id int) (*entities.BalanceEntity, error)
 }
 
 func (s *balanceService) UpdateBalance(data []byte) error {
+	cfg := config.LoadConfig()
+
 	var cmd request.UpdateBalanceCommand
 	err := json.Unmarshal(data, &cmd)
 	if err != nil {
@@ -90,8 +96,37 @@ func (s *balanceService) UpdateBalance(data []byte) error {
 
 	err = s.balanceRepo.UpdateBalance(context.Background(), newBalance)
 	if err != nil {
+		// อัปเดต balance ไม่สำเร็จ → ส่ง BALANCE_FAILED กลับไปที่ orchestrator
+		s.publishBalanceResult(cfg, cmd.TransactionID, string(entities.StatusBalanceFailed))
 		return entities.NewAppError(entities.ErrTypeInternal, "failed to update balance", err)
 	}
 
+	// อัปเดต balance สำเร็จ → ส่ง BALANCE_UPDATED กลับไปที่ orchestrator
+	s.publishBalanceResult(cfg, cmd.TransactionID, string(entities.StatusBalanceUpdated))
+
 	return nil
+}
+
+func (s *balanceService) publishBalanceResult(cfg *config.Config, txID string, status string) {
+	if s.publisher == nil {
+		log.Printf("Publisher not configured, skipping balance result publish")
+		return
+	}
+
+	msg := request.TransactionMessage{
+		TxID:         txID,
+		SourceWorker: "BALANCE",
+		Status:       status,
+	}
+
+	jsonMessage, err := json.Marshal(msg)
+	if err != nil {
+		log.Printf("Failed to marshal balance result message: %v", err)
+		return
+	}
+
+	err = s.publisher.Publish(cfg.TRANSACTION_ORCHESTRATOR_QUEUE, jsonMessage)
+	if err != nil {
+		log.Printf("Failed to publish balance result: %v", err)
+	}
 }

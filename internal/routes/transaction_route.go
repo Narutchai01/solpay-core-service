@@ -31,7 +31,7 @@ func (trc *TransactionRouteConfig) Setup() {
 	transactionRepository := repositories.NewGormTransactionRepository(trc.db)
 	uowRepository := repositories.NewSqlUnitOfWork(trc.db)
 	publisher := rabbitmq.NewPublisher(trc.channel)
-	transactionService := services.NewTransactionService(transactionRepository, uowRepository, publisher)
+	transactionService := services.NewTransactionService(transactionRepository, uowRepository, publisher, nil)
 	transactionHandler := handler.NewTransactionHandler(transactionService)
 
 	trc.route.Post("/", transactionHandler.CreateTransaction)
