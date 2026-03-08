@@ -14,13 +14,15 @@ type Consumer struct {
 	ch                 *amqp.Channel
 	transactionService services.TransactionService
 	balanceService     services.BalanceService
+	paymentService     services.PaymentService
 }
 
-func NewConsumer(ch *amqp.Channel, transactionService services.TransactionService, balanceService services.BalanceService) ports.Consumer {
+func NewConsumer(ch *amqp.Channel, transactionService services.TransactionService, balanceService services.BalanceService, paymentService services.PaymentService) ports.Consumer {
 	return &Consumer{
 		ch:                 ch,
 		transactionService: transactionService,
 		balanceService:     balanceService,
+		paymentService:     paymentService,
 	}
 }
 
@@ -70,6 +72,32 @@ func (c *Consumer) BalanceConsumer() error {
 		err := c.balanceService.UpdateBalance(msg.Body)
 		if err != nil {
 			log.Printf("Failed to handle balance update: %v", err)
+		}
+	}
+
+	return nil
+}
+
+func (c *Consumer) PaymentConsumer() error {
+	cfg := config.LoadConfig()
+	msgs, err := c.ch.Consume(
+		cfg.PAYMENT_QUEUE,
+		"",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+
+	for msg := range msgs {
+		log.Printf("Received message from payment queue: %s", string(msg.Body))
+		err := c.paymentService.ProcessPayment(context.Background(), msg.Body)
+		if err != nil {
+			log.Printf("Failed to handle payment: %v", err)
 		}
 	}
 

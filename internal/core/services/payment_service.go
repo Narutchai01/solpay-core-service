@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
@@ -10,7 +11,7 @@ import (
 )
 
 type PaymentService interface {
-	ProcessPayment(ctx context.Context, transaction entities.TransactionEntity) error
+	ProcessPayment(ctx context.Context, paymentQueue []byte) error
 }
 
 type paymentService struct {
@@ -25,16 +26,19 @@ func NewPaymentService(paymentGateWay ports.OmiseGateway, paymentRepo ports.Paym
 	}
 }
 
-func (s *paymentService) ProcessPayment(ctx context.Context, transaction entities.TransactionEntity) error {
-	promptPayID := transaction.TransactionOffChain.PropmtPayID
+func (s *paymentService) ProcessPayment(ctx context.Context, paymentQueue []byte) error {
+	var paymentData request.RequestPaymentQueue
+	if err := json.Unmarshal(paymentQueue, &paymentData); err != nil {
+		return err
+	}
 
-	recipient, err := s.paymentRepo.GetRecipentByNumber(promptPayID)
+	recipient, err := s.paymentRepo.GetRecipentByNumber(paymentData.Number)
 	if err != nil {
 		if err == entities.ErrNotFound {
 
 			rpRaw := request.CreateRecipient{
 				Name:   "Joh doe",
-				Number: promptPayID,
+				Number: paymentData.Number,
 			}
 
 			rp, err := s.paymentGateWay.CreateRecipient(rpRaw)
@@ -42,7 +46,7 @@ func (s *paymentService) ProcessPayment(ctx context.Context, transaction entitie
 				return err
 			}
 
-			recipient = entities.Recipient{Number: promptPayID, RecipientID: rp.ID}
+			recipient = entities.Recipient{Number: paymentData.Number, RecipientID: rp.ID}
 			if err := s.paymentRepo.CreateRecipient(&recipient); err != nil {
 				return err
 			}
@@ -51,8 +55,7 @@ func (s *paymentService) ProcessPayment(ctx context.Context, transaction entitie
 		}
 	}
 
-	transfer, err := s.paymentGateWay.CreateTransfer(int64(transaction.THBAmount), recipient.RecipientID)
-
+	transfer, err := s.paymentGateWay.CreateTransfer(int64(paymentData.Amount), recipient.RecipientID)
 	log.Printf("Transfer created: %+v", transfer)
 
 	return err

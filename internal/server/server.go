@@ -10,6 +10,7 @@ import (
 	"github.com/Narutchai01/solpay-core-service/internal/websocket"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/omise/omise-go"
 )
 
 type Server struct {
@@ -18,9 +19,11 @@ type Server struct {
 	TimeZone     string
 	RABBITMQ_URL string
 	QueueConfig  []rabbitmq.QueueConfig
+	omiseKey     string
+	omiseSecret  string
 }
 
-func New(port string, timeZone string, rabbitMQURL string, queueConfig []rabbitmq.QueueConfig) *Server {
+func New(port string, timeZone string, rabbitMQURL string, queueConfig []rabbitmq.QueueConfig, omiseKey string, omiseSecret string) *Server {
 	app := fiber.New(fiber.Config{
 		AppName: "Solpay core service",
 	})
@@ -31,6 +34,8 @@ func New(port string, timeZone string, rabbitMQURL string, queueConfig []rabbitm
 		TimeZone:     timeZone,
 		RABBITMQ_URL: rabbitMQURL,
 		QueueConfig:  queueConfig,
+		omiseKey:     omiseKey,
+		omiseSecret:  omiseSecret,
 	}
 }
 
@@ -67,7 +72,12 @@ func (s *Server) Start() error {
 		log.Fatalf("Error setting up RabbitMQ queues: %v", err)
 	}
 
-	consumerSetup := rabbitmq.NewConsumerSetup(channelWrapper.Channel, db, hub)
+	omise, err := omise.NewClient(s.omiseKey, s.omiseSecret)
+	if err != nil {
+		log.Fatalf("Error creating Omise client: %v", err)
+	}
+
+	consumerSetup := rabbitmq.NewConsumerSetup(channelWrapper.Channel, db, hub, omise)
 	consumerSetup.Setup()
 
 	routes.RoutesConfig(s.App, db, channelWrapper.Channel)

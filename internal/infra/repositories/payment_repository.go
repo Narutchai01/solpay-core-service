@@ -10,7 +10,7 @@ type PaymentRepository struct {
 	db *gorm.DB
 }
 
-func NewPaymentRepository(db *gorm.DB) ports.PaymentRepository {
+func NewGormPaymentRepository(db *gorm.DB) ports.PaymentRepository {
 	return &PaymentRepository{
 		db: db,
 	}
