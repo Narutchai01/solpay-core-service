@@ -42,6 +42,7 @@ func (g *omiseGateway) CreateTransfer(amountSatang int64, recipientID string) (*
 	op := &operations.CreateTransfer{
 		Amount:    amountSatang,
 		Recipient: recipientID,
+		FailFast:  true,
 	}
 
 	err := g.client.Do(transfer, op)
