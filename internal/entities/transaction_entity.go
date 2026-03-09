@@ -50,3 +50,11 @@ const (
 	StatusPaymentSuccess  TransactionStatus = "PAYMENT_SUCCESS"
 	StatusPaymentFailed   TransactionStatus = "PAYMENT_FAILD"
 )
+
+type TransactionType string
+
+const (
+	TOPUP    TransactionType = "TOPUP"
+	ONCHAIN  TransactionType = "ONCHAIN"
+	OFFCHAIN TransactionType = "OFFCHAIN"
+)

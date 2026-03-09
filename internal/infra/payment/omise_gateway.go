@@ -1,6 +1,9 @@
 package payment
 
 import (
+	"net/http"
+
+	"github.com/Narutchai01/solpay-core-service/internal/config"
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	"github.com/omise/omise-go"
@@ -37,10 +40,11 @@ func (g *omiseGateway) CreateRecipient(recinpientData request.CreateRecipient) (
 }
 
 func (g *omiseGateway) CreateTransfer(amountSatang int64, recipientID string) (*omise.Transfer, error) {
+	cfg := config.LoadConfig()
 	transfer := &omise.Transfer{}
 
 	op := &operations.CreateTransfer{
-		Amount:    amountSatang,
+		Amount:    (amountSatang * 100) + 3000,
 		Recipient: recipientID,
 		FailFast:  true,
 	}
@@ -49,6 +53,17 @@ func (g *omiseGateway) CreateTransfer(amountSatang int64, recipientID string) (*
 	if err != nil {
 		return nil, err
 	}
+	req, _ := http.NewRequest("POST",
+		"https://api.omise.co/transfers/"+transfer.ID+"/mark_as_sent",
+		nil)
+	req.SetBasicAuth(cfg.OMISE_SECRET, "")
+	http.DefaultClient.Do(req)
+
+	req, _ = http.NewRequest("POST",
+		"https://api.omise.co/transfers/"+transfer.ID+"/mark_as_paid",
+		nil)
+	req.SetBasicAuth(cfg.OMISE_SECRET, "")
+	http.DefaultClient.Do(req)
 
 	return transfer, nil
 }

@@ -69,8 +69,13 @@ func (s *transactionService) CreateTransaction(ctx context.Context, req request.
 	}
 
 	switch req.TransactionType {
-	case "top_up":
+	case string(entities.TOPUP):
 		err := s.handleMqBlockchainTransaction(result.(*entities.TransactionEntity).TransactionUUID)
+		if err != nil {
+			return nil, err
+		}
+	case string(entities.OFFCHAIN):
+		err := s.handlerMqOffChainTransaction(result.(*entities.TransactionEntity).TransactionUUID)
 		if err != nil {
 			return nil, err
 		}
@@ -81,11 +86,11 @@ func (s *transactionService) CreateTransaction(ctx context.Context, req request.
 
 func (s *transactionService) handleCreateTransactionType(ctx context.Context, req request.CreateTransactionRequest, txId uuid.UUID) error {
 	switch req.TransactionType {
-	case "top_up":
+	case string(entities.TOPUP):
 		return s.createTransactionOnChain(ctx, req, txId)
-	case "transaction_offchain":
+	case string(entities.OFFCHAIN):
 		return s.createTransactionOffChain(ctx, req, txId)
-	case "transaction_onchain":
+	case string(entities.ONCHAIN):
 		err := s.createTransactionOnChain(ctx, req, txId)
 		if err != nil {
 			return err
@@ -265,5 +270,29 @@ func (s *transactionService) handleBalanceWorker(ctx context.Context, event requ
 		}
 		s.wsHub.NotifyTransactionStatus(event.TxID, []byte(`{"status":"REFUNDED"}`))
 	}
+	return nil
+}
+
+func (s *transactionService) handlerMqOffChainTransaction(txUUID uuid.UUID) error {
+	cfg := config.LoadConfig()
+
+	transaction, err := s.transactionRepo.GetTransactionByUUID(txUUID)
+	if err != nil {
+		return err
+	}
+
+	promptPayMessage := request.RequestPaymentQueue{
+		TransactionID: transaction.TransactionUUID.String(),
+		Number:        transaction.TransactionOffChain.PropmtPayID,
+		Amount:        int64(transaction.THBAmount),
+	}
+
+	jsonMessage, err := json.Marshal(promptPayMessage)
+	if err != nil {
+		return err
+	}
+
+	s.publisher.Publish(cfg.PAYMENT_QUEUE, jsonMessage)
+
 	return nil
 }
