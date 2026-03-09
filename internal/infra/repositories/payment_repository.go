@@ -30,3 +30,7 @@ func (r *PaymentRepository) GetRecipentByNumber(number string) (entities.Recipie
 	}
 	return recipent, nil
 }
+
+func (r *PaymentRepository) CreateLogPayment(payment *entities.LogPayment) error {
+	return r.db.Create(payment).Error
+}

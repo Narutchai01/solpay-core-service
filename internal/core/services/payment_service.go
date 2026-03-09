@@ -3,11 +3,11 @@ package services
 import (
 	"context"
 	"encoding/json"
-	"log"
 
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
+	"github.com/google/uuid"
 )
 
 type PaymentService interface {
@@ -56,7 +56,22 @@ func (s *paymentService) ProcessPayment(ctx context.Context, paymentQueue []byte
 	}
 
 	transfer, err := s.paymentGateWay.CreateTransfer(int64(paymentData.Amount), recipient.RecipientID)
-	log.Printf("Transfer created: %+v", transfer)
+	if err != nil {
+		return err
+	}
+
+	transactionUUID, err := uuid.Parse(paymentData.TransactionID)
+	if err != nil {
+		return err
+	}
+	logPayment := entities.LogPayment{
+		TransactionUUID:    transactionUUID,
+		OmiseTransactionID: transfer.ID,
+	}
+
+	if err := s.paymentRepo.CreateLogPayment(&logPayment); err != nil {
+		return err
+	}
 
 	return err
 }

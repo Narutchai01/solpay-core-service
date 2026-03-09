@@ -19,6 +19,7 @@ func NewOmiseGateway(client *omise.Client) ports.OmiseGateway {
 }
 
 func (g *omiseGateway) CreateRecipient(recinpientData request.CreateRecipient) (*omise.Recipient, error) {
+	cfg := config.LoadConfig()
 	recipient := &omise.Recipient{}
 
 	op := &operations.CreateRecipient{
@@ -35,6 +36,12 @@ func (g *omiseGateway) CreateRecipient(recinpientData request.CreateRecipient) (
 	if err != nil {
 		return nil, err
 	}
+
+	req, _ := http.NewRequest("PATCH",
+		"https://api.omise.co/recipients/"+recipient.ID+"/verify",
+		nil)
+	req.SetBasicAuth(cfg.OMISE_SECRET, "")
+	_, err = http.DefaultClient.Do(req)
 
 	return recipient, nil
 }
