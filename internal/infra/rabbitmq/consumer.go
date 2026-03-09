@@ -2,11 +2,13 @@ package rabbitmq
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 
 	"github.com/Narutchai01/solpay-core-service/internal/config"
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/core/services"
+	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -15,14 +17,16 @@ type Consumer struct {
 	transactionService services.TransactionService
 	balanceService     services.BalanceService
 	paymentService     services.PaymentService
+	publisher          ports.Publisher
 }
 
-func NewConsumer(ch *amqp.Channel, transactionService services.TransactionService, balanceService services.BalanceService, paymentService services.PaymentService) ports.Consumer {
+func NewConsumer(ch *amqp.Channel, transactionService services.TransactionService, balanceService services.BalanceService, paymentService services.PaymentService, publisher ports.Publisher) ports.Consumer {
 	return &Consumer{
 		ch:                 ch,
 		transactionService: transactionService,
 		balanceService:     balanceService,
 		paymentService:     paymentService,
+		publisher:          publisher,
 	}
 }
 
@@ -95,11 +99,25 @@ func (c *Consumer) PaymentConsumer() error {
 
 	for msg := range msgs {
 		log.Printf("Received message from payment queue: %s", string(msg.Body))
-		err := c.paymentService.ProcessPayment(context.Background(), msg.Body)
+		data, err := c.paymentService.ProcessPayment(context.Background(), msg.Body)
 		if err != nil {
 			log.Printf("Failed to handle payment: %v", err)
+
+			payload := request.TransactionMessage{
+				TxID:         "",
+				SourceWorker: "PAYMENT",
+				Status:       "PAYMENT_FAILED",
+			}
+			msg.Body, _ = json.Marshal(payload)
+
+			c.publisher.Publish(cfg.TRANSACTION_ORCHESTRATOR_QUEUE, msg.Body) // Re-queue the message for retry
+			continue
+		}
+
+		err = c.publisher.Publish(cfg.TRANSACTION_ORCHESTRATOR_QUEUE, data)
+		if err != nil {
+			log.Printf("Failed to publish payment result: %v", err)
 		}
 	}
-
 	return nil
 }

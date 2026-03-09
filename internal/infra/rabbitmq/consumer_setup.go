@@ -37,7 +37,7 @@ func (cs *ConsumerSetup) Setup() {
 	transactionService := services.NewTransactionService(transactionRepo, uowRepo, Publisher, cs.wsHub)
 	balanceService := services.NewBalanceService(balanceRepo, uowRepo, Publisher)
 	paymentService := services.NewPaymentService(omiseGateway, paymentRepo)
-	consumer := NewConsumer(cs.channel, transactionService, balanceService, paymentService)
+	consumer := NewConsumer(cs.channel, transactionService, balanceService, paymentService, Publisher)
 
 	go func() {
 		if err := consumer.TransactionOrchestrator(); err != nil {

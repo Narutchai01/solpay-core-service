@@ -11,7 +11,7 @@ import (
 )
 
 type PaymentService interface {
-	ProcessPayment(ctx context.Context, paymentQueue []byte) error
+	ProcessPayment(ctx context.Context, paymentQueue []byte) ([]byte, error)
 }
 
 type paymentService struct {
@@ -26,10 +26,10 @@ func NewPaymentService(paymentGateWay ports.OmiseGateway, paymentRepo ports.Paym
 	}
 }
 
-func (s *paymentService) ProcessPayment(ctx context.Context, paymentQueue []byte) error {
+func (s *paymentService) ProcessPayment(ctx context.Context, paymentQueue []byte) ([]byte, error) {
 	var paymentData request.RequestPaymentQueue
 	if err := json.Unmarshal(paymentQueue, &paymentData); err != nil {
-		return err
+		return nil, err
 	}
 
 	recipient, err := s.paymentRepo.GetRecipentByNumber(paymentData.Number)
@@ -43,26 +43,26 @@ func (s *paymentService) ProcessPayment(ctx context.Context, paymentQueue []byte
 
 			rp, err := s.paymentGateWay.CreateRecipient(rpRaw)
 			if err != nil {
-				return err
+				return nil, err
 			}
 
 			recipient = entities.Recipient{Number: paymentData.Number, RecipientID: rp.ID}
 			if err := s.paymentRepo.CreateRecipient(&recipient); err != nil {
-				return err
+				return nil, err
 			}
 		} else {
-			return err
+			return nil, err
 		}
 	}
 
 	transfer, err := s.paymentGateWay.CreateTransfer(int64(paymentData.Amount), recipient.RecipientID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	transactionUUID, err := uuid.Parse(paymentData.TransactionID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	logPayment := entities.LogPayment{
 		TransactionUUID:    transactionUUID,
@@ -70,8 +70,14 @@ func (s *paymentService) ProcessPayment(ctx context.Context, paymentQueue []byte
 	}
 
 	if err := s.paymentRepo.CreateLogPayment(&logPayment); err != nil {
-		return err
+		return nil, err
 	}
 
-	return err
+	payload := request.TransactionMessage{
+		TxID:         paymentData.TransactionID,
+		SourceWorker: "PAYMENT",
+		Status:       string(entities.StatusBalanceUpdating),
+	}
+
+	return json.Marshal(payload)
 }
