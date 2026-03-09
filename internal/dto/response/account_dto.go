@@ -2,6 +2,7 @@ package response
 
 import "github.com/Narutchai01/solpay-core-service/internal/entities"
 
+// AccountDTO is the API representation of an account.
 type AccountDTO struct {
 	ID            uint   `json:"id"`
 	PublicAddress string `json:"public_address"`
@@ -9,7 +10,8 @@ type AccountDTO struct {
 	UpdatedAt     string `json:"updated_at"`
 }
 
-func FormaterAccountDTO(account *entities.AccountEntity) *AccountDTO {
+// FormatAccountDTO converts an AccountEntity to its API representation.
+func FormatAccountDTO(account *entities.AccountEntity) *AccountDTO {
 	return &AccountDTO{
 		ID:            account.ID,
 		PublicAddress: account.PublicAddress,
@@ -18,10 +20,11 @@ func FormaterAccountDTO(account *entities.AccountEntity) *AccountDTO {
 	}
 }
 
-func FormaterAccountDTOS(accounts []entities.AccountEntity) *[]AccountDTO {
-	var accountDTOs []AccountDTO
+// FormatAccountDTOs converts a slice of AccountEntity to a slice of AccountDTO.
+func FormatAccountDTOs(accounts []entities.AccountEntity) []AccountDTO {
+	dtos := make([]AccountDTO, 0, len(accounts))
 	for _, account := range accounts {
-		accountDTOs = append(accountDTOs, *FormaterAccountDTO(&account))
+		dtos = append(dtos, *FormatAccountDTO(&account))
 	}
-	return &accountDTOs
+	return dtos
 }

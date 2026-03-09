@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/Narutchai01/solpay-core-service/internal/config"
@@ -10,19 +9,19 @@ import (
 )
 
 func main() {
-	cgf := config.LoadConfig()
+	cfg := config.LoadConfig()
 
 	queueConfig := []rabbitmq.QueueConfig{
-		{Name: cgf.SOLANA_WORK_QUEUE, Durable: true, AutoDelete: false},
-		{Name: cgf.TRANSACTION_ORCHESTRATOR_QUEUE, Durable: true, AutoDelete: false},
-		{Name: cgf.BALANCE_QUEUE, Durable: true, AutoDelete: false},
-		{Name: cgf.PAYMENT_QUEUE, Durable: true, AutoDelete: false},
+		{Name: cfg.SOLANA_WORK_QUEUE, Durable: true, AutoDelete: false},
+		{Name: cfg.TRANSACTION_ORCHESTRATOR_QUEUE, Durable: true, AutoDelete: false},
+		{Name: cfg.BALANCE_QUEUE, Durable: true, AutoDelete: false},
+		{Name: cfg.PAYMENT_QUEUE, Durable: true, AutoDelete: false},
 	}
 
-	println(fmt.Sprintf("RabbitMQ URL: %s", cgf.RABBITMQ_URL))
-	server := server.New(cgf.APPPort, cgf.TimeZone, cgf.RABBITMQ_URL, queueConfig, cgf.OMISE_KEY, cgf.OMISE_SECRET)
+	log.Printf("RabbitMQ URL: %s", cfg.RABBITMQ_URL)
 
-	if err := server.Start(); err != nil {
+	srv := server.New(cfg, queueConfig)
+	if err := srv.Start(); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }

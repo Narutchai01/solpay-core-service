@@ -4,29 +4,27 @@ import (
 	"context"
 	"errors"
 
-	repositories "github.com/Narutchai01/solpay-core-service/internal/core/ports"
+	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/db"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
 	"gorm.io/gorm"
 )
 
-type BalanceRepository struct {
+type balanceRepository struct {
 	db *gorm.DB
 }
 
-func NewGormBalanceRepository(db *gorm.DB) repositories.BalanceRepository {
-	return &BalanceRepository{db: db}
+// NewGormBalanceRepository creates a new GORM-backed BalanceRepository.
+func NewGormBalanceRepository(database *gorm.DB) ports.BalanceRepository {
+	return &balanceRepository{db: database}
 }
 
-func (r *BalanceRepository) CreateBalance(txCtx context.Context, data *entities.BalanceEntity) error {
-	db := db.GetTx(txCtx, r.db)
-	if err := db.Create(&data).Error; err != nil {
-		return err
-	}
-	return nil
+func (r *balanceRepository) CreateBalance(txCtx context.Context, data *entities.BalanceEntity) error {
+	tx := db.GetTx(txCtx, r.db)
+	return tx.Create(data).Error
 }
 
-func (r *BalanceRepository) GetBalances(page int, limit int) ([]entities.BalanceEntity, error) {
+func (r *balanceRepository) GetBalances(page, limit int) ([]entities.BalanceEntity, error) {
 	var balances []entities.BalanceEntity
 	offset := (page - 1) * limit
 
@@ -36,7 +34,7 @@ func (r *BalanceRepository) GetBalances(page int, limit int) ([]entities.Balance
 	return balances, nil
 }
 
-func (r *BalanceRepository) CountBalances() (int64, error) {
+func (r *balanceRepository) CountBalances() (int64, error) {
 	var count int64
 	if err := r.db.Model(&entities.BalanceEntity{}).Count(&count).Error; err != nil {
 		return 0, err
@@ -44,23 +42,20 @@ func (r *BalanceRepository) CountBalances() (int64, error) {
 	return count, nil
 }
 
-func (r *BalanceRepository) GetBalanceByID(balanceID int) (*entities.BalanceEntity, error) {
+func (r *balanceRepository) GetBalanceByID(balanceID int) (*entities.BalanceEntity, error) {
 	var balance entities.BalanceEntity
 	if err := r.db.First(&balance, balanceID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return &entities.BalanceEntity{}, entities.ErrNotFound
+			return nil, entities.ErrNotFound
 		}
-		return &entities.BalanceEntity{}, entities.ErrInternal
+		return nil, err
 	}
 	return &balance, nil
 }
 
-func (r *BalanceRepository) UpdateBalance(txCtx context.Context, data *entities.BalanceEntity) error {
-	db := db.GetTx(txCtx, r.db)
-	if err := db.Model(&entities.BalanceEntity{}).
+func (r *balanceRepository) UpdateBalance(txCtx context.Context, data *entities.BalanceEntity) error {
+	tx := db.GetTx(txCtx, r.db)
+	return tx.Model(&entities.BalanceEntity{}).
 		Where("account_id = ?", data.AccountID).
-		Updates(data).Error; err != nil {
-		return err
-	}
-	return nil
+		Updates(data).Error
 }

@@ -1,36 +1,37 @@
 package repositories
 
 import (
+	"errors"
+
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
 	"gorm.io/gorm"
 )
 
-type PaymentRepository struct {
+type paymentRepository struct {
 	db *gorm.DB
 }
 
-func NewGormPaymentRepository(db *gorm.DB) ports.PaymentRepository {
-	return &PaymentRepository{
-		db: db,
-	}
+// NewGormPaymentRepository creates a new GORM-backed PaymentRepository.
+func NewGormPaymentRepository(database *gorm.DB) ports.PaymentRepository {
+	return &paymentRepository{db: database}
 }
 
-func (r *PaymentRepository) CreateRecipient(recipient *entities.Recipient) error {
+func (r *paymentRepository) CreateRecipient(recipient *entities.Recipient) error {
 	return r.db.Create(recipient).Error
 }
 
-func (r *PaymentRepository) GetRecipentByNumber(number string) (entities.Recipient, error) {
-	recipent := entities.Recipient{}
-	if err := r.db.Where("number = ?", number).First(&recipent).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+func (r *paymentRepository) GetRecipientByNumber(number string) (entities.Recipient, error) {
+	var recipient entities.Recipient
+	if err := r.db.Where("number = ?", number).First(&recipient).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return entities.Recipient{}, entities.ErrNotFound
 		}
 		return entities.Recipient{}, err
 	}
-	return recipent, nil
+	return recipient, nil
 }
 
-func (r *PaymentRepository) CreateLogPayment(payment *entities.LogPayment) error {
+func (r *paymentRepository) CreateLogPayment(payment *entities.LogPayment) error {
 	return r.db.Create(payment).Error
 }

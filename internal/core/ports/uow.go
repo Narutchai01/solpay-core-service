@@ -2,8 +2,7 @@ package ports
 
 import "context"
 
-// domain/repository.go
+// UnitOfWork executes a function within a database transaction.
 type UnitOfWork interface {
-	// Execute รับ function ที่เราต้องการให้รันใน Transaction
 	Execute(ctx context.Context, fn func(ctx context.Context) (any, error)) (any, error)
 }

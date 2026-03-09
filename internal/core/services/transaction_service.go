@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 
 	"github.com/Narutchai01/solpay-core-service/internal/config"
@@ -14,6 +15,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// TransactionService defines operations for managing transactions.
 type TransactionService interface {
 	CreateTransaction(ctx context.Context, req request.CreateTransactionRequest) (*entities.TransactionEntity, error)
 	GetTransactionByID(id int) (*entities.TransactionEntity, error)
@@ -22,28 +24,38 @@ type TransactionService interface {
 
 type transactionService struct {
 	transactionRepo ports.TransactionRepository
-	uowRepo         ports.UnitOfWork
+	uow             ports.UnitOfWork
 	publisher       ports.Publisher
 	wsHub           ports.WebSocketPort
 }
 
-func NewTransactionService(transactionRepo ports.TransactionRepository, uowRepo ports.UnitOfWork, publisher ports.Publisher, wsHub ports.WebSocketPort) TransactionService {
+// NewTransactionService creates a new TransactionService.
+func NewTransactionService(
+	transactionRepo ports.TransactionRepository,
+	uow ports.UnitOfWork,
+	publisher ports.Publisher,
+	wsHub ports.WebSocketPort,
+) TransactionService {
 	return &transactionService{
 		transactionRepo: transactionRepo,
-		uowRepo:         uowRepo,
+		uow:             uow,
 		publisher:       publisher,
 		wsHub:           wsHub,
 	}
 }
 
+// ---------------------------------------------------------------------------
+// CreateTransaction
+// ---------------------------------------------------------------------------
+
 func (s *transactionService) CreateTransaction(ctx context.Context, req request.CreateTransactionRequest) (*entities.TransactionEntity, error) {
-	genreateUUID, err := uuid.NewV7()
+	txUUID, err := uuid.NewV7()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("generate UUID: %w", err)
 	}
 
 	transaction := &entities.TransactionEntity{
-		TransactionUUID: genreateUUID,
+		TransactionUUID: txUUID,
 		AccountID:       1,
 		TransactionType: req.TransactionType,
 		THBAmount:       req.THBAmount,
@@ -51,209 +63,184 @@ func (s *transactionService) CreateTransaction(ctx context.Context, req request.
 		Fee:             req.Fee,
 	}
 
-	result, err := s.uowRepo.Execute(ctx, func(ctx context.Context) (any, error) {
-		if err := s.transactionRepo.CreateTransaction(ctx, transaction); err != nil {
+	result, err := s.uow.Execute(ctx, func(txCtx context.Context) (any, error) {
+		if err := s.transactionRepo.CreateTransaction(txCtx, transaction); err != nil {
 			return nil, err
 		}
-
-		err := s.handleCreateTransactionType(ctx, req, genreateUUID)
-		if err != nil {
+		if err := s.createSubTransactions(txCtx, req, txUUID); err != nil {
 			return nil, err
 		}
-
 		return transaction, nil
 	})
-
 	if err != nil {
+		return nil, fmt.Errorf("create transaction: %w", err)
+	}
+
+	tx := result.(*entities.TransactionEntity)
+
+	if err := s.publishAfterCreate(tx); err != nil {
 		return nil, err
 	}
 
-	switch req.TransactionType {
-	case string(entities.TOPUP):
-		err := s.handleMqBlockchainTransaction(result.(*entities.TransactionEntity).TransactionUUID)
-		if err != nil {
-			return nil, err
-		}
-	case string(entities.OFFCHAIN):
-		err := s.handlerMqOffChainTransaction(result.(*entities.TransactionEntity).TransactionUUID)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return result.(*entities.TransactionEntity), nil
+	return tx, nil
 }
 
-func (s *transactionService) handleCreateTransactionType(ctx context.Context, req request.CreateTransactionRequest, txId uuid.UUID) error {
+// publishAfterCreate sends the initial MQ message for the appropriate transaction type.
+func (s *transactionService) publishAfterCreate(tx *entities.TransactionEntity) error {
+	switch tx.TransactionType {
+	case string(entities.TOPUP):
+		return s.publishBlockchainTransaction(tx.TransactionUUID)
+	case string(entities.OFFCHAIN):
+		return s.publishOffChainTransaction(tx.TransactionUUID)
+	default:
+		return nil
+	}
+}
+
+// createSubTransactions creates the type-specific child records within the UoW.
+func (s *transactionService) createSubTransactions(ctx context.Context, req request.CreateTransactionRequest, txID uuid.UUID) error {
 	switch req.TransactionType {
 	case string(entities.TOPUP):
-		return s.createTransactionOnChain(ctx, req, txId)
+		return s.createTransactionOnChain(ctx, req, txID)
 	case string(entities.OFFCHAIN):
-		return s.createTransactionOffChain(ctx, req, txId)
+		return s.createTransactionOffChain(ctx, req, txID)
 	case string(entities.ONCHAIN):
-		err := s.createTransactionOnChain(ctx, req, txId)
-		if err != nil {
+		if err := s.createTransactionOnChain(ctx, req, txID); err != nil {
 			return err
 		}
-		return s.createTransactionOffChain(ctx, req, txId)
+		return s.createTransactionOffChain(ctx, req, txID)
 	default:
-		return errors.New("invalid transaction type")
+		return fmt.Errorf("unsupported transaction type: %s", req.TransactionType)
 	}
 }
 
-func (s *transactionService) createTransactionOnChain(ctx context.Context, req request.CreateTransactionRequest, txId uuid.UUID) error {
+func (s *transactionService) createTransactionOnChain(ctx context.Context, req request.CreateTransactionRequest, txID uuid.UUID) error {
 	if req.TxHash == nil {
-		return errors.New("onchain require")
+		return errors.New("tx_hash is required for on-chain transactions")
 	}
-	transactionOnChain := &entities.TransactionOnChain{
-		TransactionID: txId,
+	return s.transactionRepo.CreateTransactionOnChain(ctx, &entities.TransactionOnChain{
+		TransactionID: txID,
 		TxHash:        *req.TxHash,
-	}
-	err := s.transactionRepo.CreateTransactionOnChain(ctx, transactionOnChain)
-	if err != nil {
-		return err
-	}
-	return nil
+	})
 }
 
-func (s *transactionService) createTransactionOffChain(ctx context.Context, req request.CreateTransactionRequest, txId uuid.UUID) error {
+func (s *transactionService) createTransactionOffChain(ctx context.Context, req request.CreateTransactionRequest, txID uuid.UUID) error {
 	if req.PromptPayID == nil {
-		return errors.New("offchain require")
+		return errors.New("prompt_pay_id is required for off-chain transactions")
 	}
-	transactionOffChain := &entities.TransactionOffChain{
-		TransactionID: txId,
-		PropmtPayID:   *req.PromptPayID,
-	}
-	err := s.transactionRepo.CreateTransactionOffChain(ctx, transactionOffChain)
-	if err != nil {
-		return err
-	}
-	return nil
+	return s.transactionRepo.CreateTransactionOffChain(ctx, &entities.TransactionOffChain{
+		TransactionID: txID,
+		PromptPayID:   *req.PromptPayID,
+	})
 }
+
+// ---------------------------------------------------------------------------
+// GetTransactionByID
+// ---------------------------------------------------------------------------
 
 func (s *transactionService) GetTransactionByID(id int) (*entities.TransactionEntity, error) {
-	transaction, err := s.transactionRepo.GetTransactionByID(id)
+	tx, err := s.transactionRepo.GetTransactionByID(id)
 	if err != nil {
 		if errors.Is(err, entities.ErrNotFound) {
-			return &entities.TransactionEntity{}, entities.NewAppError(entities.ErrTypeNotFound, "Transaction not found", err)
+			return nil, entities.NewAppError(entities.ErrTypeNotFound, fmt.Sprintf("transaction %d not found", id), err)
 		}
-		return &entities.TransactionEntity{}, entities.NewAppError(entities.ErrTypeInternal, "Failed to get transaction", err)
+		return nil, entities.NewAppError(entities.ErrTypeInternal, "failed to get transaction", err)
 	}
-	return transaction, nil
+	return tx, nil
 }
 
-func (s *transactionService) handleMqBlockchainTransaction(txUUID uuid.UUID) error {
-
-	cfg := config.LoadConfig()
-
-	transaction, err := s.transactionRepo.GetTransactionByUUID(txUUID)
-	if err != nil {
-		return err
-	}
-
-	metaData := models.MetaDataSolana{
-		Transaction_type: transaction.TransactionType,
-		Amount_THB:       int(transaction.THBAmount),
-		Amount_USDC:      int(transaction.USDTAmount),
-		AccountID:        int(transaction.AccountID),
-	}
-
-	solanaTxMessage := models.SolanaTxMessage{
-		TxID:     transaction.TransactionUUID.String(),
-		Base64Tx: transaction.TransactionOnChain.TxHash,
-		MetaData: metaData,
-	}
-
-	jsonMessage, err := json.Marshal(solanaTxMessage)
-	if err != nil {
-		return err
-	}
-
-	s.publisher.Publish(cfg.SOLANA_WORK_QUEUE, jsonMessage)
-
-	return nil
-}
+// ---------------------------------------------------------------------------
+// HandleTransactionUpdate (orchestrator)
+// ---------------------------------------------------------------------------
 
 func (s *transactionService) HandleTransactionUpdate(ctx context.Context, msg []byte) error {
-	var txMsg request.TransactionMessage
-	err := json.Unmarshal(msg, &txMsg)
-	if err != nil {
-		return err
+	var event request.TransactionMessage
+	if err := json.Unmarshal(msg, &event); err != nil {
+		return fmt.Errorf("unmarshal transaction message: %w", err)
 	}
 
-	txUUID, err := uuid.Parse(txMsg.TxID)
+	txUUID, err := uuid.Parse(event.TxID)
 	if err != nil {
-		return err
+		return fmt.Errorf("parse transaction UUID: %w", err)
 	}
 
 	tx, err := s.transactionRepo.GetTransactionByUUID(txUUID)
 	if err != nil {
-		return err
+		return fmt.Errorf("get transaction by UUID: %w", err)
 	}
 
-	if tx.Status == txMsg.Status {
-		log.Printf("Transaction %s already has status %s", txMsg.TxID, txMsg.Status)
+	if tx.Status == event.Status {
+		log.Printf("Transaction %s already has status %s, skipping", event.TxID, event.Status)
 		return errors.New("transaction already processed")
 	}
 
-	err = s.transactionRepo.UpdateTransactionStatus(ctx, txMsg.TxID, txMsg.Status)
-	if err != nil {
-		return err
+	if err := s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, event.Status); err != nil {
+		return fmt.Errorf("update transaction status: %w", err)
 	}
 
-	return s.processStateTransaction(ctx, tx, txMsg)
+	return s.routeEvent(ctx, tx, event)
 }
 
-func (s *transactionService) processStateTransaction(ctx context.Context, tx *entities.TransactionEntity, event request.TransactionMessage) error {
-
+// routeEvent dispatches to the correct workflow based on transaction type.
+func (s *transactionService) routeEvent(ctx context.Context, tx *entities.TransactionEntity, event request.TransactionMessage) error {
 	switch tx.TransactionType {
-	case "top_up":
+	case string(entities.TOPUP):
 		return s.topUpWorkflow(ctx, tx, event)
+	case string(entities.OFFCHAIN):
+		return s.offchainWorkflow(ctx, event)
+	default:
+		return nil
 	}
-	return nil
 }
+
+// ---------------------------------------------------------------------------
+// Top-up workflow
+// ---------------------------------------------------------------------------
 
 func (s *transactionService) topUpWorkflow(ctx context.Context, tx *entities.TransactionEntity, event request.TransactionMessage) error {
-	cfg := config.LoadConfig()
-
 	switch event.SourceWorker {
 	case "SOLANA":
-		return s.handleSolanaWorker(ctx, tx, event, cfg)
+		return s.handleSolanaWorker(ctx, tx, event)
 	case "BALANCE":
 		return s.handleBalanceWorker(ctx, event)
+	default:
+		return nil
 	}
-
-	return nil
 }
 
-func (s *transactionService) handleSolanaWorker(ctx context.Context, tx *entities.TransactionEntity, event request.TransactionMessage, cfg *config.Config) error {
+func (s *transactionService) handleSolanaWorker(ctx context.Context, tx *entities.TransactionEntity, event request.TransactionMessage) error {
+	cfg := config.LoadConfig()
+
 	switch event.Status {
 	case string(entities.StatusSolanaSuccess):
-		rawMsg := request.UpdateBalanceCommand{
+		cmd := request.UpdateBalanceCommand{
 			TransactionID: tx.TransactionUUID.String(),
 			AccountID:     tx.AccountID,
 			THBAmount:     int64(tx.THBAmount),
 			USDTAmount:    int64(tx.USDTAmount),
 		}
 
-		jsonMessage, err := json.Marshal(rawMsg)
+		jsonMsg, err := json.Marshal(cmd)
 		if err != nil {
-			return err
+			return fmt.Errorf("marshal balance command: %w", err)
 		}
 
 		if err := s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, string(entities.StatusBalanceUpdating)); err != nil {
-			return err
+			return fmt.Errorf("update status to BALANCE_UPDATING: %w", err)
 		}
 
-		s.publisher.Publish(cfg.BALANCE_QUEUE, jsonMessage)
-		s.wsHub.NotifyTransactionStatus(event.TxID, []byte(`{"status":"BALANCE_UPDATING"}`))
+		if err := s.publisher.Publish(cfg.BALANCE_QUEUE, jsonMsg); err != nil {
+			return fmt.Errorf("publish balance command: %w", err)
+		}
+		s.notifyStatus(event.TxID, "BALANCE_UPDATING")
+
 	case string(entities.StatusSolanaFailed):
 		if err := s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, string(entities.StatusRefunded)); err != nil {
-			return err
+			return fmt.Errorf("update status to REFUNDED: %w", err)
 		}
-
-		s.wsHub.NotifyTransactionStatus(event.TxID, []byte(`{"status":"FAILED"}`))
+		s.notifyStatus(event.TxID, "FAILED")
 	}
+
 	return nil
 }
 
@@ -261,38 +248,107 @@ func (s *transactionService) handleBalanceWorker(ctx context.Context, event requ
 	switch event.Status {
 	case string(entities.StatusBalanceUpdated):
 		if err := s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, string(entities.StatusCompleted)); err != nil {
-			return err
+			return fmt.Errorf("update status to COMPLETED: %w", err)
 		}
-		s.wsHub.NotifyTransactionStatus(event.TxID, []byte(`{"status":"COMPLETED"}`))
+		s.notifyStatus(event.TxID, "COMPLETED")
+
 	case string(entities.StatusBalanceFailed):
 		if err := s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, string(entities.StatusRefunded)); err != nil {
-			return err
+			return fmt.Errorf("update status to REFUNDED: %w", err)
 		}
-		s.wsHub.NotifyTransactionStatus(event.TxID, []byte(`{"status":"REFUNDED"}`))
+		s.notifyStatus(event.TxID, "REFUNDED")
+	}
+
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// Off-chain workflow
+// ---------------------------------------------------------------------------
+
+func (s *transactionService) offchainWorkflow(ctx context.Context, event request.TransactionMessage) error {
+	if event.SourceWorker == "PAYMENT" {
+		return s.handlePaymentWorker(ctx, event)
 	}
 	return nil
 }
 
-func (s *transactionService) handlerMqOffChainTransaction(txUUID uuid.UUID) error {
-	cfg := config.LoadConfig()
+func (s *transactionService) handlePaymentWorker(ctx context.Context, event request.TransactionMessage) error {
+	switch event.Status {
+	case string(entities.StatusPaymentSuccess):
+		if err := s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, string(entities.StatusCompleted)); err != nil {
+			return fmt.Errorf("update status to COMPLETED: %w", err)
+		}
+		s.notifyStatus(event.TxID, "COMPLETED")
 
-	transaction, err := s.transactionRepo.GetTransactionByUUID(txUUID)
-	if err != nil {
-		return err
+	case string(entities.StatusPaymentFailed):
+		if err := s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, string(entities.StatusRefunded)); err != nil {
+			return fmt.Errorf("update status to REFUNDED: %w", err)
+		}
+		s.notifyStatus(event.TxID, "FAILED")
 	}
-
-	promptPayMessage := request.RequestPaymentQueue{
-		TransactionID: transaction.TransactionUUID.String(),
-		Number:        transaction.TransactionOffChain.PropmtPayID,
-		Amount:        int64(transaction.THBAmount),
-	}
-
-	jsonMessage, err := json.Marshal(promptPayMessage)
-	if err != nil {
-		return err
-	}
-
-	s.publisher.Publish(cfg.PAYMENT_QUEUE, jsonMessage)
 
 	return nil
+}
+
+// ---------------------------------------------------------------------------
+// MQ publishing helpers
+// ---------------------------------------------------------------------------
+
+func (s *transactionService) publishBlockchainTransaction(txUUID uuid.UUID) error {
+	cfg := config.LoadConfig()
+
+	tx, err := s.transactionRepo.GetTransactionByUUID(txUUID)
+	if err != nil {
+		return fmt.Errorf("get transaction for blockchain publish: %w", err)
+	}
+
+	msg := models.SolanaTxMessage{
+		TxID:     tx.TransactionUUID.String(),
+		Base64Tx: tx.TransactionOnChain.TxHash,
+		MetaData: models.SolanaMetaData{
+			TransactionType: tx.TransactionType,
+			AmountTHB:       int(tx.THBAmount),
+			AmountUSDC:      int(tx.USDTAmount),
+			AccountID:       int(tx.AccountID),
+		},
+	}
+
+	jsonMsg, err := json.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("marshal solana tx message: %w", err)
+	}
+
+	return s.publisher.Publish(cfg.SOLANA_WORK_QUEUE, jsonMsg)
+}
+
+func (s *transactionService) publishOffChainTransaction(txUUID uuid.UUID) error {
+	cfg := config.LoadConfig()
+
+	tx, err := s.transactionRepo.GetTransactionByUUID(txUUID)
+	if err != nil {
+		return fmt.Errorf("get transaction for off-chain publish: %w", err)
+	}
+
+	msg := request.RequestPaymentQueue{
+		TransactionID: tx.TransactionUUID.String(),
+		Number:        tx.TransactionOffChain.PromptPayID,
+		Amount:        int64(tx.THBAmount),
+	}
+
+	jsonMsg, err := json.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("marshal payment queue message: %w", err)
+	}
+
+	return s.publisher.Publish(cfg.PAYMENT_QUEUE, jsonMsg)
+}
+
+// notifyStatus sends a WebSocket notification if a hub is configured.
+func (s *transactionService) notifyStatus(txID, status string) {
+	if s.wsHub == nil {
+		return
+	}
+	payload := fmt.Sprintf(`{"status":%q}`, status)
+	s.wsHub.NotifyTransactionStatus(txID, []byte(payload))
 }

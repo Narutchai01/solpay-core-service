@@ -4,27 +4,24 @@ import (
 	"context"
 	"errors"
 
-	repositories "github.com/Narutchai01/solpay-core-service/internal/core/ports"
+	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/db"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
 	"gorm.io/gorm"
 )
 
-// Note : Ensure that GormAccountRepository implements AccountRepository
-type GormAccountRepository struct {
+type gormAccountRepository struct {
 	db *gorm.DB
 }
 
-// Note : Constructor function for GormAccountRepository
-func NewGormAccountRepository(db *gorm.DB) repositories.AccountRepository {
-	return &GormAccountRepository{db: db}
+// NewGormAccountRepository creates a new GORM-backed AccountRepository.
+func NewGormAccountRepository(database *gorm.DB) ports.AccountRepository {
+	return &gormAccountRepository{db: database}
 }
 
-func (r *GormAccountRepository) CreateAccount(txCtx context.Context, data *entities.AccountEntity) error {
-
-	db := db.GetTx(txCtx, r.db)
-	// Note : Implement the logic to create an account in the database
-	if err := db.Create(&data).Error; err != nil {
+func (r *gormAccountRepository) CreateAccount(txCtx context.Context, data *entities.AccountEntity) error {
+	tx := db.GetTx(txCtx, r.db)
+	if err := tx.Create(data).Error; err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
 			return entities.ErrConflict
 		}
@@ -33,7 +30,7 @@ func (r *GormAccountRepository) CreateAccount(txCtx context.Context, data *entit
 	return nil
 }
 
-func (r *GormAccountRepository) GetAccounts(page int, limit int) ([]entities.AccountEntity, error) {
+func (r *gormAccountRepository) GetAccounts(page, limit int) ([]entities.AccountEntity, error) {
 	var accounts []entities.AccountEntity
 	offset := (page - 1) * limit
 
@@ -43,7 +40,7 @@ func (r *GormAccountRepository) GetAccounts(page int, limit int) ([]entities.Acc
 	return accounts, nil
 }
 
-func (r *GormAccountRepository) CountAccounts() (int64, error) {
+func (r *gormAccountRepository) CountAccounts() (int64, error) {
 	var count int64
 	if err := r.db.Model(&entities.AccountEntity{}).Count(&count).Error; err != nil {
 		return 0, err
@@ -51,24 +48,24 @@ func (r *GormAccountRepository) CountAccounts() (int64, error) {
 	return count, nil
 }
 
-func (r *GormAccountRepository) GetAccountByID(accountID int) (*entities.AccountEntity, error) {
+func (r *gormAccountRepository) GetAccountByID(accountID int) (*entities.AccountEntity, error) {
 	var account entities.AccountEntity
 	if err := r.db.First(&account, accountID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return &entities.AccountEntity{}, entities.ErrNotFound
+			return nil, entities.ErrNotFound
 		}
-		return &entities.AccountEntity{}, entities.ErrInternal
+		return nil, err
 	}
 	return &account, nil
 }
 
-func (r *GormAccountRepository) GetAccountByPublicAddress(address string) (*entities.AccountEntity, error) {
+func (r *gormAccountRepository) GetAccountByPublicAddress(address string) (*entities.AccountEntity, error) {
 	var account entities.AccountEntity
 	if err := r.db.Where("public_address = ?", address).First(&account).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return &entities.AccountEntity{}, entities.ErrNotFound
+			return nil, entities.ErrNotFound
 		}
-		return &entities.AccountEntity{}, entities.ErrInternal
+		return nil, err
 	}
 	return &account, nil
 }

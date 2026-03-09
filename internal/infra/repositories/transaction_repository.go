@@ -4,81 +4,78 @@ import (
 	"context"
 	"errors"
 
-	repositories "github.com/Narutchai01/solpay-core-service/internal/core/ports"
+	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/db"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
-type TransactionRepository struct {
+type transactionRepository struct {
 	db *gorm.DB
 }
 
-func NewGormTransactionRepository(db *gorm.DB) repositories.TransactionRepository {
-	return &TransactionRepository{db: db}
+// NewGormTransactionRepository creates a new GORM-backed TransactionRepository.
+func NewGormTransactionRepository(database *gorm.DB) ports.TransactionRepository {
+	return &transactionRepository{db: database}
 }
 
-func (r *TransactionRepository) CreateTransaction(txCtx context.Context, data *entities.TransactionEntity) error {
-	db := db.GetTx(txCtx, r.db)
-	if err := db.Create(&data).Error; err != nil {
-		return err
-	}
-	return nil
+func (r *transactionRepository) CreateTransaction(txCtx context.Context, data *entities.TransactionEntity) error {
+	tx := db.GetTx(txCtx, r.db)
+	return tx.Create(data).Error
 }
 
-func (r *TransactionRepository) CreateTransactionOnChain(txCtx context.Context, data *entities.TransactionOnChain) error {
-	db := db.GetTx(txCtx, r.db)
-	if err := db.Create(&data).Error; err != nil {
-		return err
-	}
-	return nil
+func (r *transactionRepository) CreateTransactionOnChain(txCtx context.Context, data *entities.TransactionOnChain) error {
+	tx := db.GetTx(txCtx, r.db)
+	return tx.Create(data).Error
 }
 
-func (r *TransactionRepository) CreateTransactionOffChain(txCtx context.Context, data *entities.TransactionOffChain) error {
-	db := db.GetTx(txCtx, r.db)
-	if err := db.Create(&data).Error; err != nil {
-		return err
-	}
-	return nil
+func (r *transactionRepository) CreateTransactionOffChain(txCtx context.Context, data *entities.TransactionOffChain) error {
+	tx := db.GetTx(txCtx, r.db)
+	return tx.Create(data).Error
 }
 
-func (r *TransactionRepository) UpdateTransactionStatus(txCtx context.Context, transactionUUID string, status string) error {
-	db := db.GetTx(txCtx, r.db)
-	if err := db.Model(&entities.TransactionEntity{}).Where("transaction_uuid = ?", transactionUUID).Update("status", status).Error; err != nil {
-		return err
-	}
-	return nil
+func (r *transactionRepository) UpdateTransactionStatus(txCtx context.Context, transactionUUID string, status string) error {
+	tx := db.GetTx(txCtx, r.db)
+	return tx.Model(&entities.TransactionEntity{}).
+		Where("transaction_uuid = ?", transactionUUID).
+		Update("status", status).Error
 }
 
-func (r *TransactionRepository) GetTransactionByAccountID(accountID int) ([]entities.TransactionEntity, error) {
+func (r *transactionRepository) GetTransactionByAccountID(accountID int) ([]entities.TransactionEntity, error) {
 	var transactions []entities.TransactionEntity
 	if err := r.db.Where("account_id = ?", accountID).Find(&transactions).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return []entities.TransactionEntity{}, entities.ErrNotFound
+			return nil, entities.ErrNotFound
 		}
+		return nil, err
 	}
 	return transactions, nil
 }
 
-func (r *TransactionRepository) GetTransactionByID(transactionID int) (*entities.TransactionEntity, error) {
+func (r *transactionRepository) GetTransactionByID(transactionID int) (*entities.TransactionEntity, error) {
 	var transaction entities.TransactionEntity
 	if err := r.db.First(&transaction, transactionID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return &entities.TransactionEntity{}, entities.ErrNotFound
+			return nil, entities.ErrNotFound
 		}
-		return &entities.TransactionEntity{}, entities.ErrInternal
+		return nil, err
 	}
 	return &transaction, nil
 }
 
-func (r *TransactionRepository) GetTransactionByUUID(txUUID uuid.UUID) (*entities.TransactionEntity, error) {
+func (r *transactionRepository) GetTransactionByUUID(txUUID uuid.UUID) (*entities.TransactionEntity, error) {
 	var transaction entities.TransactionEntity
-	if err := r.db.Preload("TransactionOnChain").Preload("TransactionOffChain").Where("transaction_uuid = ?", txUUID.String()).First(&transaction).Error; err != nil {
+	err := r.db.
+		Preload("TransactionOnChain").
+		Preload("TransactionOffChain").
+		Where("transaction_uuid = ?", txUUID.String()).
+		First(&transaction).Error
+	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return &entities.TransactionEntity{}, entities.ErrNotFound
+			return nil, entities.ErrNotFound
 		}
-		return &entities.TransactionEntity{}, entities.ErrInternal
+		return nil, err
 	}
 	return &transaction, nil
 }

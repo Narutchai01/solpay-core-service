@@ -3,6 +3,7 @@ package server
 import (
 	"log"
 
+	"github.com/Narutchai01/solpay-core-service/internal/config"
 	"github.com/Narutchai01/solpay-core-service/internal/db"
 	"github.com/Narutchai01/solpay-core-service/internal/infra/rabbitmq"
 	"github.com/Narutchai01/solpay-core-service/internal/routes"
@@ -13,74 +14,65 @@ import (
 	"github.com/omise/omise-go"
 )
 
+// Server represents the HTTP server and its dependencies.
 type Server struct {
-	App          *fiber.App
-	Port         string
-	TimeZone     string
-	RABBITMQ_URL string
-	QueueConfig  []rabbitmq.QueueConfig
-	omiseKey     string
-	omiseSecret  string
+	app         *fiber.App
+	cfg         *config.Config
+	queueConfig []rabbitmq.QueueConfig
 }
 
-func New(port string, timeZone string, rabbitMQURL string, queueConfig []rabbitmq.QueueConfig, omiseKey string, omiseSecret string) *Server {
+// New creates a new Server with the given configuration.
+func New(cfg *config.Config, queueConfig []rabbitmq.QueueConfig) *Server {
 	app := fiber.New(fiber.Config{
 		AppName: "Solpay core service",
 	})
 
 	return &Server{
-		App:          app,
-		Port:         port,
-		TimeZone:     timeZone,
-		RABBITMQ_URL: rabbitMQURL,
-		QueueConfig:  queueConfig,
-		omiseKey:     omiseKey,
-		omiseSecret:  omiseSecret,
+		app:         app,
+		cfg:         cfg,
+		queueConfig: queueConfig,
 	}
 }
 
+// Start initialises all dependencies and starts the HTTP server.
 func (s *Server) Start() error {
-
-	s.App.Use(logger.New(logger.Config{
-		// Format:   "[${time}] ${status} - ${latency} ${method} ${path}\n",
-		TimeZone: s.TimeZone,
+	s.app.Use(logger.New(logger.Config{
+		TimeZone: s.cfg.TimeZone,
 	}))
 
-	s.App.Get("/", func(c *fiber.Ctx) error {
+	s.app.Get("/", func(c *fiber.Ctx) error {
 		return utils.HandleResponse(c, nil, nil, "Server is running")
 	})
 
 	hub := websocket.NewHub()
 	go hub.Run()
 
-	db, err := db.ConnectDB()
+	dbConn, err := db.ConnectDB()
 	if err != nil {
 		log.Fatalf("Error connecting to database: %v", err)
 	}
 
-	routes.SetupWebSocketRoutes(s.App, hub, db)
+	routes.SetupWebSocketRoutes(s.app, hub, dbConn)
 
-	channelWrapper, err := rabbitmq.NewRabbitMQ(s.RABBITMQ_URL)
+	mq, err := rabbitmq.NewRabbitMQ(s.cfg.RABBITMQ_URL)
 	if err != nil {
 		log.Fatalf("Error connecting to RabbitMQ: %v", err)
 	}
+	defer mq.Close()
 
-	defer channelWrapper.Close()
-
-	err = rabbitmq.SetupQueues(channelWrapper.Channel, s.QueueConfig)
-	if err != nil {
+	if err := rabbitmq.SetupQueues(mq.Channel, s.queueConfig); err != nil {
 		log.Fatalf("Error setting up RabbitMQ queues: %v", err)
 	}
 
-	omise, err := omise.NewClient(s.omiseKey, s.omiseSecret)
+	omiseClient, err := omise.NewClient(s.cfg.OMISE_KEY, s.cfg.OMISE_SECRET)
 	if err != nil {
 		log.Fatalf("Error creating Omise client: %v", err)
 	}
 
-	consumerSetup := rabbitmq.NewConsumerSetup(channelWrapper.Channel, db, hub, omise)
+	consumerSetup := rabbitmq.NewConsumerSetup(mq.Channel, dbConn, hub, omiseClient)
 	consumerSetup.Setup()
 
-	routes.RoutesConfig(s.App, db, channelWrapper.Channel)
+	routes.RoutesConfig(s.app, dbConn, mq.Channel, s.cfg)
 
-	return s.App.Listen(":" + s.Port)
+	return s.app.Listen(":" + s.cfg.APPPort)
 }

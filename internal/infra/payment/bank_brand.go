@@ -1,9 +1,9 @@
 package payment
 
-// ประกาศ Custom Type เป็น BankBrand
+// BankBrand represents a Thai bank identifier for Omise.
 type BankBrand string
 
-// ประกาศ Enum ค่าคงที่สำหรับธนาคารต่างๆ
+// Supported bank brands.
 const (
 	BankBBL   BankBrand = "bbl"
 	BankKBank BankBrand = "kbank"
@@ -14,7 +14,7 @@ const (
 	BankGSB   BankBrand = "gsb"
 )
 
-// ฟังก์ชันเสริม: เอาไว้ Validate ว่า Frontend ส่งค่าที่รองรับมาให้เราหรือไม่
+// IsValid reports whether b is a recognised bank brand.
 func (b BankBrand) IsValid() bool {
 	switch b {
 	case BankBBL, BankKBank, BankKTB, BankSCB, BankBAY, BankTTB, BankGSB:

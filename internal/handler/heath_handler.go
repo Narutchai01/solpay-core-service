@@ -8,17 +8,17 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-type HealthHandler struct{}
+// HealthHandler defines HTTP handlers for health checks.
+type HealthHandler struct {
+	cfg *config.Config
+}
 
-func NewHealthHandler() *HealthHandler {
-	return &HealthHandler{}
+// NewHealthHandler creates a new HealthHandler.
+func NewHealthHandler(cfg *config.Config) *HealthHandler {
+	return &HealthHandler{cfg: cfg}
 }
 
 func (h *HealthHandler) HandleHealthCheck(c *fiber.Ctx) error {
-
-	cfg := config.LoadConfig()
-
-	msg := fmt.Sprintf("Service is running. Environment: %s, on port %s", cfg.Environment, cfg.APPPort)
-
+	msg := fmt.Sprintf("Service is running. Environment: %s, on port %s", h.cfg.Environment, h.cfg.APPPort)
 	return utils.HandleResponse(c, nil, nil, msg)
 }

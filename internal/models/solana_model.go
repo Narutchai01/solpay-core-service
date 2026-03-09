@@ -1,14 +1,16 @@
 package models
 
-type MetaDataSolana struct {
-	Transaction_type string `json:"transaction_type"`
-	Amount_THB       int    `json:"amount_thb"`
-	Amount_USDC      int    `json:"amount_usdc"`
-	AccountID        int    `json:"account_id"`
+// SolanaMetaData holds transaction metadata for the Solana blockchain worker.
+type SolanaMetaData struct {
+	TransactionType string `json:"transaction_type"`
+	AmountTHB       int    `json:"amount_thb"`
+	AmountUSDC      int    `json:"amount_usdc"`
+	AccountID       int    `json:"account_id"`
 }
 
+// SolanaTxMessage is the message sent to the Solana worker queue.
 type SolanaTxMessage struct {
 	TxID     string         `json:"tx_id"`
 	Base64Tx string         `json:"base64_tx"`
-	MetaData MetaDataSolana `json:"metadata"`
+	MetaData SolanaMetaData `json:"metadata"`
 }

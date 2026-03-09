@@ -32,7 +32,7 @@ type TransactionOffChain struct {
 	gorm.Model
 	TransactionID uuid.UUID          `json:"transaction_id" gorm:"type:uuid;not null;index"`
 	Transaction   *TransactionEntity `json:"transaction,omitempty" gorm:"foreignKey:TransactionID;references:TransactionUUID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	PropmtPayID   string             `json:"prompt_pay_id" gorm:"not null;"`
+	PromptPayID   string             `json:"prompt_pay_id" gorm:"not null;"`
 	SlipURL       *string            `json:"slip_url" default:"null" `
 }
 
@@ -50,7 +50,7 @@ const (
 	StatusCompleted       TransactionStatus = "COMPLETED"            // ทุกอย่างสมบูรณ์
 	StatusRefunded        TransactionStatus = "REFUNDED"             // เกิดข้อผิดพลาดและคืนเงินแล้ว
 	StatusPaymentSuccess  TransactionStatus = "PAYMENT_SUCCESS"
-	StatusPaymentFailed   TransactionStatus = "PAYMENT_FAILD"
+	StatusPaymentFailed   TransactionStatus = "PAYMENT_FAILED"
 )
 
 type TransactionType string

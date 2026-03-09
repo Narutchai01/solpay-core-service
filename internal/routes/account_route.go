@@ -4,30 +4,29 @@ import (
 	"github.com/Narutchai01/solpay-core-service/internal/core/services"
 	"github.com/Narutchai01/solpay-core-service/internal/handler"
 	"github.com/Narutchai01/solpay-core-service/internal/infra/repositories"
-	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 )
 
+// AccountRouteConfig configures account-related routes.
 type AccountRouteConfig struct {
-	route    fiber.Router
-	db       *gorm.DB
-	validate *validator.Validate
+	route fiber.Router
+	db    *gorm.DB
 }
 
-func NewAccountRouteConfig(route fiber.Router, db *gorm.DB, validate *validator.Validate) *AccountRouteConfig {
+// NewAccountRouteConfig creates a new AccountRouteConfig.
+func NewAccountRouteConfig(route fiber.Router, db *gorm.DB) *AccountRouteConfig {
 	return &AccountRouteConfig{
-		route:    route,
-		db:       db,
-		validate: validate,
+		route: route,
+		db:    db,
 	}
 }
 
 func (arc *AccountRouteConfig) Setup() {
-	accountRepository := repositories.NewGormAccountRepository(arc.db)
-	balanceRepository := repositories.NewGormBalanceRepository(arc.db)
-	uowRepository := repositories.NewSqlUnitOfWork(arc.db)
-	accountService := services.NewAccountService(accountRepository, balanceRepository, uowRepository)
+	accountRepo := repositories.NewGormAccountRepository(arc.db)
+	balanceRepo := repositories.NewGormBalanceRepository(arc.db)
+	uow := repositories.NewSqlUnitOfWork(arc.db)
+	accountService := services.NewAccountService(accountRepo, balanceRepo, uow)
 	accountHandler := handler.NewAccountHandler(accountService)
 
 	arc.route.Post("/", accountHandler.CreateAccountHandler)

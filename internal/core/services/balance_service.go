@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"sync"
 
@@ -11,58 +12,52 @@ import (
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
-	"github.com/Narutchai01/solpay-core-service/internal/utils"
 )
 
+// BalanceService defines operations for managing balances.
 type BalanceService interface {
-	GetBalances(page int, limit int) ([]entities.BalanceEntity, int64, error)
+	GetBalances(page, limit int) ([]entities.BalanceEntity, int64, error)
 	GetBalanceByID(id int) (*entities.BalanceEntity, error)
 	UpdateBalance(data []byte) error
 }
 
 type balanceService struct {
-	accountRepo ports.AccountRepository
 	balanceRepo ports.BalanceRepository
-	uowRepo     ports.UnitOfWork
+	uow         ports.UnitOfWork
 	publisher   ports.Publisher
 }
 
-func NewBalanceService(balanceRepo ports.BalanceRepository, uowRepo ports.UnitOfWork, publisher ports.Publisher) BalanceService {
+// NewBalanceService creates a new BalanceService.
+func NewBalanceService(balanceRepo ports.BalanceRepository, uow ports.UnitOfWork, publisher ports.Publisher) BalanceService {
 	return &balanceService{
 		balanceRepo: balanceRepo,
-		uowRepo:     uowRepo,
+		uow:         uow,
 		publisher:   publisher,
 	}
 }
 
-func (s *balanceService) GetBalances(page int, limit int) ([]entities.BalanceEntity, int64, error) {
-	var balances []entities.BalanceEntity
-	var total int64
-	var errList, errCount error
-	var wg sync.WaitGroup
+func (s *balanceService) GetBalances(page, limit int) ([]entities.BalanceEntity, int64, error) {
+	var (
+		balances []entities.BalanceEntity
+		total    int64
+		errList  error
+		errCount error
+		wg       sync.WaitGroup
+	)
 
 	wg.Add(2)
-
 	go func() {
 		defer wg.Done()
 		balances, errList = s.balanceRepo.GetBalances(page, limit)
 	}()
-
 	go func() {
 		defer wg.Done()
 		total, errCount = s.balanceRepo.CountBalances()
 	}()
-
 	wg.Wait()
 
-	if errList != nil {
-		msg := utils.FormatValidationError(errList)
-		return []entities.BalanceEntity{}, 0, entities.NewAppError(entities.ErrTypeInternal, msg, errList)
-	}
-
-	if errCount != nil {
-		msg := utils.FormatValidationError(errCount)
-		return []entities.BalanceEntity{}, 0, entities.NewAppError(entities.ErrTypeInternal, msg, errCount)
+	if err := errors.Join(errList, errCount); err != nil {
+		return nil, 0, entities.NewAppError(entities.ErrTypeInternal, "failed to list balances", err)
 	}
 
 	return balances, total, nil
@@ -72,9 +67,9 @@ func (s *balanceService) GetBalanceByID(id int) (*entities.BalanceEntity, error)
 	balance, err := s.balanceRepo.GetBalanceByID(id)
 	if err != nil {
 		if errors.Is(err, entities.ErrNotFound) {
-			return &entities.BalanceEntity{}, entities.NewAppError(entities.ErrTypeNotFound, "balance not found", err)
+			return nil, entities.NewAppError(entities.ErrTypeNotFound, fmt.Sprintf("balance %d not found", id), err)
 		}
-		return &entities.BalanceEntity{}, entities.NewAppError(entities.ErrTypeInternal, "internal server error", err)
+		return nil, entities.NewAppError(entities.ErrTypeInternal, "failed to get balance", err)
 	}
 	return balance, nil
 }
@@ -83,8 +78,7 @@ func (s *balanceService) UpdateBalance(data []byte) error {
 	cfg := config.LoadConfig()
 
 	var cmd request.UpdateBalanceCommand
-	err := json.Unmarshal(data, &cmd)
-	if err != nil {
+	if err := json.Unmarshal(data, &cmd); err != nil {
 		return entities.NewAppError(entities.ErrTypeBadRequest, "invalid request body", err)
 	}
 
@@ -94,20 +88,16 @@ func (s *balanceService) UpdateBalance(data []byte) error {
 		USDTAmount: cmd.USDTAmount,
 	}
 
-	err = s.balanceRepo.UpdateBalance(context.Background(), newBalance)
-	if err != nil {
-		// อัปเดต balance ไม่สำเร็จ → ส่ง BALANCE_FAILED กลับไปที่ orchestrator
+	if err := s.balanceRepo.UpdateBalance(context.Background(), newBalance); err != nil {
 		s.publishBalanceResult(cfg, cmd.TransactionID, string(entities.StatusBalanceFailed))
 		return entities.NewAppError(entities.ErrTypeInternal, "failed to update balance", err)
 	}
 
-	// อัปเดต balance สำเร็จ → ส่ง BALANCE_UPDATED กลับไปที่ orchestrator
 	s.publishBalanceResult(cfg, cmd.TransactionID, string(entities.StatusBalanceUpdated))
-
 	return nil
 }
 
-func (s *balanceService) publishBalanceResult(cfg *config.Config, txID string, status string) {
+func (s *balanceService) publishBalanceResult(cfg *config.Config, txID, status string) {
 	if s.publisher == nil {
 		log.Printf("Publisher not configured, skipping balance result publish")
 		return
@@ -125,8 +115,7 @@ func (s *balanceService) publishBalanceResult(cfg *config.Config, txID string, s
 		return
 	}
 
-	err = s.publisher.Publish(cfg.TRANSACTION_ORCHESTRATOR_QUEUE, jsonMessage)
-	if err != nil {
+	if err := s.publisher.Publish(cfg.TRANSACTION_ORCHESTRATOR_QUEUE, jsonMessage); err != nil {
 		log.Printf("Failed to publish balance result: %v", err)
 	}
 }

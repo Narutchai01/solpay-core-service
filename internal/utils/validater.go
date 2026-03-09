@@ -2,21 +2,20 @@ package utils
 
 import "github.com/go-playground/validator/v10"
 
-// utils/validator.go
-
-// ฟังก์ชันสำหรับดึง Msg สั้นๆ
+// FormatValidationError extracts a human-readable message from a validation error.
 func FormatValidationError(err error) string {
-	if validationErrors, ok := err.(validator.ValidationErrors); ok {
-		// เอาแค่ error แรกที่เจอก็พอ
-		err := validationErrors[0]
-		switch err.Tag() {
-		case "required":
-			return err.Field() + " is required"
-		case "len":
-			return err.Field() + " must be " + err.Param() + " characters long"
-			// ... case อื่นๆ
-		}
-		return err.Error() // default
+	validationErrors, ok := err.(validator.ValidationErrors)
+	if !ok {
+		return "Invalid input data"
 	}
-	return "Invalid input data"
+
+	fe := validationErrors[0]
+	switch fe.Tag() {
+	case "required":
+		return fe.Field() + " is required"
+	case "len":
+		return fe.Field() + " must be " + fe.Param() + " characters long"
+	default:
+		return fe.Error()
+	}
 }

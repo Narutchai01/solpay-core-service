@@ -3,16 +3,18 @@ package rabbitmq
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/Narutchai01/solpay-core-service/internal/config"
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/core/services"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
+	"github.com/Narutchai01/solpay-core-service/internal/entities"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-type Consumer struct {
+type consumer struct {
 	ch                 *amqp.Channel
 	transactionService services.TransactionService
 	balanceService     services.BalanceService
@@ -20,8 +22,9 @@ type Consumer struct {
 	publisher          ports.Publisher
 }
 
+// NewConsumer creates a new Consumer that processes messages from RabbitMQ queues.
 func NewConsumer(ch *amqp.Channel, transactionService services.TransactionService, balanceService services.BalanceService, paymentService services.PaymentService, publisher ports.Publisher) ports.Consumer {
-	return &Consumer{
+	return &consumer{
 		ch:                 ch,
 		transactionService: transactionService,
 		balanceService:     balanceService,
@@ -30,10 +33,10 @@ func NewConsumer(ch *amqp.Channel, transactionService services.TransactionServic
 	}
 }
 
-func (c *Consumer) TransactionOrchestrator() error {
-	cfg := config.LoadConfig().TRANSACTION_ORCHESTRATOR_QUEUE
+func (c *consumer) TransactionOrchestrator() error {
+	cfg := config.LoadConfig()
 	msgs, err := c.ch.Consume(
-		cfg,
+		cfg.TRANSACTION_ORCHESTRATOR_QUEUE,
 		"",
 		true,
 		false,
@@ -42,13 +45,12 @@ func (c *Consumer) TransactionOrchestrator() error {
 		nil,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("consume transaction orchestrator queue: %w", err)
 	}
 
 	for msg := range msgs {
-		log.Printf("Received message from queue: %s", string(msg.Body))
-		err := c.transactionService.HandleTransactionUpdate(context.Background(), msg.Body)
-		if err != nil {
+		log.Printf("Received message from transaction orchestrator queue: %s", string(msg.Body))
+		if err := c.transactionService.HandleTransactionUpdate(context.Background(), msg.Body); err != nil {
 			log.Printf("Failed to handle transaction update: %v", err)
 		}
 	}
@@ -56,7 +58,7 @@ func (c *Consumer) TransactionOrchestrator() error {
 	return nil
 }
 
-func (c *Consumer) BalanceConsumer() error {
+func (c *consumer) BalanceConsumer() error {
 	cfg := config.LoadConfig()
 	msgs, err := c.ch.Consume(
 		cfg.BALANCE_QUEUE,
@@ -68,13 +70,12 @@ func (c *Consumer) BalanceConsumer() error {
 		nil,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("consume balance queue: %w", err)
 	}
 
 	for msg := range msgs {
 		log.Printf("Received message from balance queue: %s", string(msg.Body))
-		err := c.balanceService.UpdateBalance(msg.Body)
-		if err != nil {
+		if err := c.balanceService.UpdateBalance(msg.Body); err != nil {
 			log.Printf("Failed to handle balance update: %v", err)
 		}
 	}
@@ -82,7 +83,7 @@ func (c *Consumer) BalanceConsumer() error {
 	return nil
 }
 
-func (c *Consumer) PaymentConsumer() error {
+func (c *consumer) PaymentConsumer() error {
 	cfg := config.LoadConfig()
 	msgs, err := c.ch.Consume(
 		cfg.PAYMENT_QUEUE,
@@ -94,7 +95,7 @@ func (c *Consumer) PaymentConsumer() error {
 		nil,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("consume payment queue: %w", err)
 	}
 
 	for msg := range msgs {
@@ -106,18 +107,25 @@ func (c *Consumer) PaymentConsumer() error {
 			payload := request.TransactionMessage{
 				TxID:         "",
 				SourceWorker: "PAYMENT",
-				Status:       "PAYMENT_FAILED",
+				Status:       string(entities.StatusPaymentFailed),
 			}
-			msg.Body, _ = json.Marshal(payload)
 
-			c.publisher.Publish(cfg.TRANSACTION_ORCHESTRATOR_QUEUE, msg.Body) // Re-queue the message for retry
+			failBody, marshalErr := json.Marshal(payload)
+			if marshalErr != nil {
+				log.Printf("Failed to marshal failure payload: %v", marshalErr)
+				continue
+			}
+
+			if pubErr := c.publisher.Publish(cfg.TRANSACTION_ORCHESTRATOR_QUEUE, failBody); pubErr != nil {
+				log.Printf("Failed to publish failure message: %v", pubErr)
+			}
 			continue
 		}
 
-		err = c.publisher.Publish(cfg.TRANSACTION_ORCHESTRATOR_QUEUE, data)
-		if err != nil {
+		if err := c.publisher.Publish(cfg.TRANSACTION_ORCHESTRATOR_QUEUE, data); err != nil {
 			log.Printf("Failed to publish payment result: %v", err)
 		}
 	}
+
 	return nil
 }

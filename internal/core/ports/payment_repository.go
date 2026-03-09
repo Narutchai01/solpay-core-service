@@ -2,8 +2,9 @@ package ports
 
 import "github.com/Narutchai01/solpay-core-service/internal/entities"
 
+// PaymentRepository defines operations for payment-related persistence.
 type PaymentRepository interface {
-	CreateRecipient(recipent *entities.Recipient) error
-	GetRecipentByNumber(number string) (entities.Recipient, error)
+	CreateRecipient(recipient *entities.Recipient) error
+	GetRecipientByNumber(number string) (entities.Recipient, error)
 	CreateLogPayment(payment *entities.LogPayment) error
 }

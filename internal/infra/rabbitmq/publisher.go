@@ -1,30 +1,37 @@
 package rabbitmq
 
 import (
+	"fmt"
+
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-type Publisher struct {
+type publisher struct {
 	channel *amqp.Channel
 }
 
+// NewPublisher creates a new Publisher backed by an AMQP channel.
 func NewPublisher(channel *amqp.Channel) ports.Publisher {
-	return &Publisher{
+	return &publisher{
 		channel: channel,
 	}
 }
 
-func (p *Publisher) Publish(queueName string, message []byte) error {
-	return p.channel.Publish(
-		"",        // exchange (เว้นว่างไว้คือส่งเข้า Default Exchange ตรงๆ)
-		queueName, // routing key (ถ้าไม่ใส่ exchange ชื่อ routing key จะตรงกับชื่อคิว)
+func (p *publisher) Publish(queueName string, message []byte) error {
+	err := p.channel.Publish(
+		"",        // default exchange
+		queueName, // routing key = queue name
 		false,     // mandatory
 		false,     // immediate
 		amqp.Publishing{
 			ContentType:  "application/json",
-			DeliveryMode: amqp.Persistent, // ⭐️ สำคัญ: บอกให้ RabbitMQ Save ข้อความลง Disk กันหาย
+			DeliveryMode: amqp.Persistent,
 			Body:         message,
 		},
 	)
+	if err != nil {
+		return fmt.Errorf("publish to queue %q: %w", queueName, err)
+	}
+	return nil
 }
