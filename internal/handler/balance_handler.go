@@ -12,6 +12,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// BalanceHandler defines HTTP handlers for balance operations.
 type BalanceHandler interface {
 	GetBalancesHandler(c *fiber.Ctx) error
 	GetBalanceByIDHandler(c *fiber.Ctx) error
@@ -22,6 +23,7 @@ type balanceHandler struct {
 	validate       *validator.Validate
 }
 
+// NewBalanceHandler creates a new BalanceHandler.
 func NewBalanceHandler(balanceService services.BalanceService) BalanceHandler {
 	return &balanceHandler{
 		balanceService: balanceService,
@@ -30,7 +32,6 @@ func NewBalanceHandler(balanceService services.BalanceService) BalanceHandler {
 }
 
 func (h *balanceHandler) GetBalancesHandler(c *fiber.Ctx) error {
-
 	var req request.GetBalancesRequest
 	if err := c.QueryParser(&req); err != nil {
 		msg := utils.FormatValidationError(err)
@@ -42,15 +43,12 @@ func (h *balanceHandler) GetBalancesHandler(c *fiber.Ctx) error {
 		return utils.HandleResponse(c, nil, entities.NewAppError(entities.ErrTypeBadRequest, msg, err))
 	}
 
-	page, limit := req.Page, req.Limit
-
-	balances, total, err := h.balanceService.GetBalances(page, limit)
+	balances, total, err := h.balanceService.GetBalances(req.Page, req.Limit)
 	if err != nil {
 		return utils.HandleResponse(c, nil, err)
 	}
 
-	pagination := response.FormaterPaginationResponseDTO(int(total), page, response.FormaterBalanceDTOS(balances))
-
+	pagination := response.FormatPaginationResponseDTO(int(total), req.Page, response.FormatBalanceDTOs(balances))
 	msg := fmt.Sprintf("Retrieved %d balances successfully", len(balances))
 
 	return utils.HandleResponse(c, pagination, nil, msg)
@@ -60,8 +58,7 @@ func (h *balanceHandler) GetBalanceByIDHandler(c *fiber.Ctx) error {
 	id, err := c.ParamsInt("id")
 	if err != nil {
 		msg := utils.FormatValidationError(err)
-		appErr := entities.NewAppError(entities.ErrTypeBadRequest, msg, err)
-		return utils.HandleResponse(c, nil, appErr)
+		return utils.HandleResponse(c, nil, entities.NewAppError(entities.ErrTypeBadRequest, msg, err))
 	}
 
 	balance, err := h.balanceService.GetBalanceByID(id)
@@ -69,6 +66,5 @@ func (h *balanceHandler) GetBalanceByIDHandler(c *fiber.Ctx) error {
 		return utils.HandleResponse(c, nil, err)
 	}
 
-	balanceDTO := response.FormaterBalanceDTO(balance)
-	return utils.HandleResponse(c, balanceDTO, nil)
+	return utils.HandleResponse(c, response.FormatBalanceDTO(balance), nil)
 }

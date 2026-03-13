@@ -23,6 +23,9 @@ type Config struct {
 	SOLANA_WORK_QUEUE              string
 	TRANSACTION_ORCHESTRATOR_QUEUE string
 	BALANCE_QUEUE                  string
+	PAYMENT_QUEUE                  string
+	OMISE_KEY                      string
+	OMISE_SECRET                   string
 }
 
 func GetEnv(key string, fallback ...string) string {
@@ -57,5 +60,8 @@ func LoadConfig() *Config {
 		SOLANA_WORK_QUEUE:              GetEnv("SOLANA_WORK_QUEUE", "solana-worker.tx.submit"),
 		TRANSACTION_ORCHESTRATOR_QUEUE: GetEnv("CORE_TRANSACTION_QUEUE", "core.transaction.status.update"),
 		BALANCE_QUEUE:                  GetEnv("CORE_BALANCE_QUEUE", "core.balance.update"),
+		PAYMENT_QUEUE:                  GetEnv("CORE_PAYMENT_QUEUE", "core.payment.update"),
+		OMISE_KEY:                      GetEnv("OMISE_KEY"),
+		OMISE_SECRET:                   GetEnv("OMISE_SECRET"),
 	}
 }

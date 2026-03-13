@@ -1,7 +1,7 @@
 package request
 
 type CreateTransactionRequest struct {
-	TransactionType string `json:"transaction_type" validate:"required,oneof=top_up transaction_onchain transaction_offchain"`
+	TransactionType string `json:"transaction_type" validate:"required,oneof=top_up transaction_onchain OFFCHAIN"`
 
 	THBAmount  float64 `json:"thb_amount" validate:"min=0"`
 	USDTAmount float64 `json:"usdt_amount" validate:"min=0"`

@@ -3,29 +3,31 @@ package repositories
 import (
 	"context"
 
-	repositories "github.com/Narutchai01/solpay-core-service/internal/core/ports"
+	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
+	"github.com/Narutchai01/solpay-core-service/internal/db"
 	"gorm.io/gorm"
 )
 
-type SqlUnitOfWork struct {
+type sqlUnitOfWork struct {
 	db *gorm.DB
 }
 
-func NewSqlUnitOfWork(db *gorm.DB) repositories.UnitOfWork {
-	return &SqlUnitOfWork{db: db}
+// NewSqlUnitOfWork creates a new UnitOfWork backed by GORM transactions.
+func NewSqlUnitOfWork(database *gorm.DB) ports.UnitOfWork {
+	return &sqlUnitOfWork{db: database}
 }
 
-func (u *SqlUnitOfWork) Execute(ctx context.Context, fn func(ctx context.Context) (any, error)) (any, error) {
+func (u *sqlUnitOfWork) Execute(ctx context.Context, fn func(ctx context.Context) (any, error)) (any, error) {
 	var result any
 	err := u.db.Transaction(func(tx *gorm.DB) error {
-		txCtx := context.WithValue(ctx, "tx_key", tx)
+		txCtx := db.NewTxContext(ctx, tx)
 
-		res, err := fn(txCtx) // รับค่าที่ return จาก UseCase
+		res, err := fn(txCtx)
 		if err != nil {
 			return err
 		}
 
-		result = res // เก็บค่าไว้ในตัวแปรด้านนอก
+		result = res
 		return nil
 	})
 

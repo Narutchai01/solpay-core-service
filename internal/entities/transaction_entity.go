@@ -6,17 +6,19 @@ import (
 )
 
 type TransactionEntity struct {
+	TransactionUUID uuid.UUID `json:"transaction_uuid" gorm:"primaryKey;not null;uniqueIndex;type:uuid"`
 	gorm.Model
-	TransactionUUID     uuid.UUID            `json:"transaction_uuid" gorm:"not null;uniqueIndex;type:uuid"`
 	AccountID           uint                 `json:"account_id" gorm:"not null;index"`
 	CategoryID          string               `json:"category_id" gorm:"default:null;"`
-	TransactionType     string               `json:"transaction_type" gorm:"not null;"`
+	TransactionType     string               `json:"transaction_type" gorm:"not null;index"`
 	Status              string               `json:"status" gorm:"not null;default:'pending'"`
 	THBAmount           float64              `json:"thb_amount" gorm:"not null;default:0"`
 	USDTAmount          float64              `json:"usdt_amount" gorm:"not null;default:0"`
 	Fee                 float64              `json:"fee" gorm:"not null;default:0"`
 	TransactionOnChain  *TransactionOnChain  `json:"transaction_on_chain,omitempty" gorm:"foreignKey:TransactionID;references:TransactionUUID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	TransactionOffChain *TransactionOffChain `json:"transaction_off_chain,omitempty" gorm:"foreignKey:TransactionID;references:TransactionUUID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+
+	LogPayment *LogPayment `json:"log_payment,omitempty" gorm:"foreignKey:TransactionUUID;references:TransactionUUID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
 type TransactionOnChain struct {
@@ -30,7 +32,7 @@ type TransactionOffChain struct {
 	gorm.Model
 	TransactionID uuid.UUID          `json:"transaction_id" gorm:"type:uuid;not null;index"`
 	Transaction   *TransactionEntity `json:"transaction,omitempty" gorm:"foreignKey:TransactionID;references:TransactionUUID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	PropmtPayID   string             `json:"prompt_pay_id" gorm:"not null;"`
+	PromptPayID   string             `json:"prompt_pay_id" gorm:"not null;"`
 	SlipURL       *string            `json:"slip_url" default:"null" `
 }
 
@@ -48,5 +50,13 @@ const (
 	StatusCompleted       TransactionStatus = "COMPLETED"            // ทุกอย่างสมบูรณ์
 	StatusRefunded        TransactionStatus = "REFUNDED"             // เกิดข้อผิดพลาดและคืนเงินแล้ว
 	StatusPaymentSuccess  TransactionStatus = "PAYMENT_SUCCESS"
-	StatusPaymentFailed   TransactionStatus = "PAYMENT_FAILD"
+	StatusPaymentFailed   TransactionStatus = "PAYMENT_FAILED"
+)
+
+type TransactionType string
+
+const (
+	TOPUP    TransactionType = "TOPUP"
+	ONCHAIN  TransactionType = "ONCHAIN"
+	OFFCHAIN TransactionType = "OFFCHAIN"
 )

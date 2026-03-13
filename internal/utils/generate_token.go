@@ -10,28 +10,34 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// CreateJWTToken creates a signed JWT token string.
 func CreateJWTToken(secretKey string, claims jwt.MapClaims) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString([]byte(secretKey))
 	if err != nil {
-		return "", fmt.Errorf("failed to sign token: %w", err)
+		return "", fmt.Errorf("sign token: %w", err)
 	}
 	return tokenString, nil
 }
 
-func GenerateAccesssToken(accountID uint) string {
+// GenerateAccessToken creates a JWT access token for the given account.
+func GenerateAccessToken(accountID uint) string {
 	cfg := config.LoadConfig()
-	secret := cfg.SECRET_JWT
-	jwtExprise := cfg.JWT_EXPIRATION_HOURS
 
-	hours, _ := strconv.Atoi(jwtExprise)
-	cliams := jwt.MapClaims{
+	hours, err := strconv.Atoi(cfg.JWT_EXPIRATION_HOURS)
+	if err != nil {
+		slog.Error("GenerateAccessToken: invalid JWT_EXPIRATION_HOURS", "error", err)
+		return ""
+	}
+
+	claims := jwt.MapClaims{
 		"account_id": accountID,
 		"exp":        time.Now().Add(time.Hour * time.Duration(hours)).Unix(),
 	}
-	token, err := CreateJWTToken(secret, cliams)
+
+	token, err := CreateJWTToken(cfg.SECRET_JWT, claims)
 	if err != nil {
-		slog.Error("GenerateAccesssToken: failed to create JWT token", "error", err)
+		slog.Error("GenerateAccessToken: failed to create JWT token", "error", err)
 		return ""
 	}
 	return token

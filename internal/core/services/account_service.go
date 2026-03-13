@@ -3,54 +3,52 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
-	"github.com/Narutchai01/solpay-core-service/internal/utils"
 )
 
-// Note: Define the AccountService interface
+// AccountService defines operations for managing accounts.
 type AccountService interface {
 	CreateAccount(ctx context.Context, req request.CreateAccountRequest) (*entities.AccountEntity, error)
-	GetAccounts(page int, limit int) ([]entities.AccountEntity, int64, error)
+	GetAccounts(page, limit int) ([]entities.AccountEntity, int64, error)
 	GetAccountByID(id int) (*entities.AccountEntity, error)
 }
 
-// Note: Implement the AccountService interface
 type accountService struct {
 	accountRepo ports.AccountRepository
 	balanceRepo ports.BalanceRepository
-	uowRepo     ports.UnitOfWork
+	uow         ports.UnitOfWork
 }
 
-// Note: Constructor function for AccountService
-func NewAccountService(accountRepo ports.AccountRepository, balanceRepo ports.BalanceRepository, uowRepo ports.UnitOfWork) AccountService {
+// NewAccountService creates a new AccountService.
+func NewAccountService(accountRepo ports.AccountRepository, balanceRepo ports.BalanceRepository, uow ports.UnitOfWork) AccountService {
 	return &accountService{
 		accountRepo: accountRepo,
 		balanceRepo: balanceRepo,
-		uowRepo:     uowRepo,
+		uow:         uow,
 	}
 }
 
 func (s *accountService) CreateAccount(ctx context.Context, req request.CreateAccountRequest) (*entities.AccountEntity, error) {
-
-	account, err := s.accountRepo.GetAccountByPublicAddress(req.PublicAddress)
-	if err == nil && account.ID != 0 {
-		return account, nil
-	} else if err != nil && !errors.Is(err, entities.ErrNotFound) {
-		msg := utils.FormatValidationError(err)
-		return &entities.AccountEntity{}, entities.NewAppError(entities.ErrTypeInternal, msg, err)
+	// Return existing account if the address is already registered.
+	existing, err := s.accountRepo.GetAccountByPublicAddress(req.PublicAddress)
+	if err == nil && existing.ID != 0 {
+		return existing, nil
+	}
+	if err != nil && !errors.Is(err, entities.ErrNotFound) {
+		return nil, entities.NewAppError(entities.ErrTypeInternal, "failed to check existing account", err)
 	}
 
-	result, err := s.uowRepo.Execute(ctx, func(ctx context.Context) (any, error) {
+	result, err := s.uow.Execute(ctx, func(txCtx context.Context) (any, error) {
 		account := &entities.AccountEntity{
 			PublicAddress: req.PublicAddress,
 		}
-
-		if err := s.accountRepo.CreateAccount(ctx, account); err != nil {
-			return &entities.AccountEntity{}, err
+		if err := s.accountRepo.CreateAccount(txCtx, account); err != nil {
+			return nil, err
 		}
 
 		balance := &entities.BalanceEntity{
@@ -58,50 +56,41 @@ func (s *accountService) CreateAccount(ctx context.Context, req request.CreateAc
 			THBAmount:  0,
 			USDTAmount: 0,
 		}
-
-		if err := s.balanceRepo.CreateBalance(ctx, balance); err != nil {
-			return &entities.AccountEntity{}, err
+		if err := s.balanceRepo.CreateBalance(txCtx, balance); err != nil {
+			return nil, err
 		}
 
 		return account, nil
 	})
-
 	if err != nil {
-		msg := utils.FormatValidationError(err)
-		return &entities.AccountEntity{}, entities.NewAppError(entities.ErrTypeInternal, msg, err)
+		return nil, entities.NewAppError(entities.ErrTypeInternal, "failed to create account", err)
 	}
 
 	return result.(*entities.AccountEntity), nil
 }
 
-func (s *accountService) GetAccounts(page int, limit int) ([]entities.AccountEntity, int64, error) {
-	var accounts []entities.AccountEntity
-	var total int64
-	var errList, errCount error
-	var wg sync.WaitGroup
+func (s *accountService) GetAccounts(page, limit int) ([]entities.AccountEntity, int64, error) {
+	var (
+		accounts []entities.AccountEntity
+		total    int64
+		errList  error
+		errCount error
+		wg       sync.WaitGroup
+	)
 
 	wg.Add(2)
-
 	go func() {
 		defer wg.Done()
 		accounts, errList = s.accountRepo.GetAccounts(page, limit)
 	}()
-
 	go func() {
 		defer wg.Done()
 		total, errCount = s.accountRepo.CountAccounts()
 	}()
-
 	wg.Wait()
 
-	if errList != nil {
-		msg := utils.FormatValidationError(errList)
-		return []entities.AccountEntity{}, 0, entities.NewAppError(entities.ErrTypeInternal, msg, errList)
-	}
-
-	if errCount != nil {
-		msg := utils.FormatValidationError(errCount)
-		return []entities.AccountEntity{}, 0, entities.NewAppError(entities.ErrTypeInternal, msg, errCount)
+	if err := errors.Join(errList, errCount); err != nil {
+		return nil, 0, entities.NewAppError(entities.ErrTypeInternal, "failed to list accounts", err)
 	}
 
 	return accounts, total, nil
@@ -111,9 +100,9 @@ func (s *accountService) GetAccountByID(id int) (*entities.AccountEntity, error)
 	account, err := s.accountRepo.GetAccountByID(id)
 	if err != nil {
 		if errors.Is(err, entities.ErrNotFound) {
-			return &entities.AccountEntity{}, entities.NewAppError(entities.ErrTypeNotFound, "account not found", err)
+			return nil, entities.NewAppError(entities.ErrTypeNotFound, fmt.Sprintf("account %d not found", id), err)
 		}
-		return &entities.AccountEntity{}, entities.NewAppError(entities.ErrTypeInternal, "internal server error", err)
+		return nil, entities.NewAppError(entities.ErrTypeInternal, "failed to get account", err)
 	}
 	return account, nil
 }

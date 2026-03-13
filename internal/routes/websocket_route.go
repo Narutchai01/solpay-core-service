@@ -80,7 +80,7 @@ func fetchTransactionPayload(db *gorm.DB, txID string) []byte {
 		return errResp
 	}
 
-	dto := response.FormaterTransactionDTO(&transaction)
+	dto := response.FormatTransactionDTO(&transaction)
 	payload, err := json.Marshal(dto)
 	if err != nil {
 		log.Printf("Failed to marshal transaction for tx_id: %s, error: %v", txID, err)
