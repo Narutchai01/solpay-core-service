@@ -17,4 +17,5 @@ func RoutesConfig(app *fiber.App, db *gorm.DB, channel *amqp.Channel, cfg *confi
 	NewHealthRouteConfig(v1.Group("/health"), cfg).Setup()
 	NewBalanceRouteConfig(v1.Group("/balances"), db).Setup()
 	NewTransactionRouteConfig(v1.Group("/transactions"), db, channel).Setup()
+	NewQuoteRouteConfig(v1.Group("/quotes"), db).Setup()
 }

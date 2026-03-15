@@ -8,7 +8,7 @@ import (
 )
 
 type Quote struct {
-	ID           string    `gorm:"primaryKey;type:varchar(36)"` // เช่น q_1234...
+	ID           string    `gorm:"primaryKey;type:varchar(50)"` // เช่น q_1234...
 	AccountID    int64     `gorm:"index"`
 	Type         string    `gorm:"type:varchar(20)"`                   // เช่น "TOPUP_CRYPTO"
 	THBAmount    int64     `gorm:"column:thb_amount"`                  // เก็บเป็นสตางค์ เช่น 100000 (1,000 บาท)
