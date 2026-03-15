@@ -216,6 +216,7 @@ func (s *transactionService) handleSolanaWorker(ctx context.Context, tx *entitie
 		cmd := request.UpdateBalanceCommand{
 			TransactionID: tx.TransactionUUID.String(),
 			AccountID:     tx.AccountID,
+			Action:        string(entities.ActionDeposit),
 			THBAmount:     int64(tx.THBAmount),
 			USDTAmount:    int64(tx.USDTAmount),
 		}
@@ -251,6 +252,12 @@ func (s *transactionService) handleBalanceWorker(ctx context.Context, event requ
 			return fmt.Errorf("update status to COMPLETED: %w", err)
 		}
 		s.notifyStatus(event.TxID, "COMPLETED")
+	case string(entities.StatusBalanceWithdrawn):
+		if err := s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, string(entities.StatusBalanceWithdrawn)); err != nil {
+			return fmt.Errorf("update status to BALANCE_WITHDRAWN: %w", err)
+		}
+
+		s.handlePaymentWorker(ctx, event)
 
 	case string(entities.StatusBalanceFailed):
 		if err := s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, string(entities.StatusRefunded)); err != nil {
@@ -330,10 +337,12 @@ func (s *transactionService) publishOffChainTransaction(txUUID uuid.UUID) error 
 		return fmt.Errorf("get transaction for off-chain publish: %w", err)
 	}
 
-	msg := request.RequestPaymentQueue{
+	msg := request.UpdateBalanceCommand{
 		TransactionID: tx.TransactionUUID.String(),
-		Number:        tx.TransactionOffChain.PromptPayID,
-		Amount:        int64(tx.THBAmount),
+		AccountID:     tx.AccountID,
+		THBAmount:     int64(tx.THBAmount),
+		USDTAmount:    int64(tx.USDTAmount),
+		Action:        string(entities.ActionWithdraw),
 	}
 
 	jsonMsg, err := json.Marshal(msg)
@@ -341,7 +350,7 @@ func (s *transactionService) publishOffChainTransaction(txUUID uuid.UUID) error 
 		return fmt.Errorf("marshal payment queue message: %w", err)
 	}
 
-	return s.publisher.Publish(cfg.PAYMENT_QUEUE, jsonMsg)
+	return s.publisher.Publish(cfg.BALANCE_QUEUE, jsonMsg)
 }
 
 // notifyStatus sends a WebSocket notification if a hub is configured.

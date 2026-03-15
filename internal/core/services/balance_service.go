@@ -19,6 +19,8 @@ type BalanceService interface {
 	GetBalances(page, limit int) ([]entities.BalanceEntity, int64, error)
 	GetBalanceByID(id int) (*entities.BalanceEntity, error)
 	UpdateBalance(data []byte) error
+	WithDraw(data []byte) error
+	Deposit(data []byte) error
 }
 
 type balanceService struct {
@@ -75,6 +77,23 @@ func (s *balanceService) GetBalanceByID(id int) (*entities.BalanceEntity, error)
 }
 
 func (s *balanceService) UpdateBalance(data []byte) error {
+	var cmd request.UpdateBalanceCommand
+	if err := json.Unmarshal(data, &cmd); err != nil {
+		return entities.NewAppError(entities.ErrTypeBadRequest, "invalid request body", err)
+	}
+
+	switch cmd.Action {
+	case string(entities.ActionDeposit):
+		return s.Deposit(data)
+	case string(entities.ActionWithdraw):
+		return s.WithDraw(data)
+	default:
+		return entities.NewAppError(entities.ErrTypeBadRequest, "invalid action", nil)
+	}
+}
+
+// Deposit handles deposit to a balance
+func (s *balanceService) Deposit(data []byte) error {
 	cfg := config.LoadConfig()
 
 	var cmd request.UpdateBalanceCommand
@@ -82,15 +101,55 @@ func (s *balanceService) UpdateBalance(data []byte) error {
 		return entities.NewAppError(entities.ErrTypeBadRequest, "invalid request body", err)
 	}
 
-	newBalance := &entities.BalanceEntity{
-		AccountID:  cmd.AccountID,
-		THBAmount:  cmd.THBAmount,
-		USDTAmount: cmd.USDTAmount,
+	// Retrieve current balance
+	balance, err := s.balanceRepo.GetBalanceByID(int(cmd.AccountID))
+	if err != nil {
+		s.publishBalanceResult(cfg, cmd.TransactionID, string(entities.StatusBalanceFailed))
+		return entities.NewAppError(entities.ErrTypeInternal, "failed to get balance", err)
 	}
 
-	if err := s.balanceRepo.UpdateBalance(context.Background(), newBalance); err != nil {
+	// Add amounts
+	balance.THBAmount += cmd.THBAmount
+	balance.USDTAmount += cmd.USDTAmount
+
+	if err := s.balanceRepo.UpdateBalance(context.Background(), balance); err != nil {
 		s.publishBalanceResult(cfg, cmd.TransactionID, string(entities.StatusBalanceFailed))
-		return entities.NewAppError(entities.ErrTypeInternal, "failed to update balance", err)
+		return entities.NewAppError(entities.ErrTypeInternal, "failed to deposit balance", err)
+	}
+
+	s.publishBalanceResult(cfg, cmd.TransactionID, string(entities.StatusBalanceUpdated))
+	return nil
+}
+
+// WithDraw handles withdrawal from a balance
+func (s *balanceService) WithDraw(data []byte) error {
+	cfg := config.LoadConfig()
+
+	var cmd request.UpdateBalanceCommand
+	if err := json.Unmarshal(data, &cmd); err != nil {
+		return entities.NewAppError(entities.ErrTypeBadRequest, "invalid request body", err)
+	}
+
+	// Retrieve current balance
+	balance, err := s.balanceRepo.GetBalanceByID(int(cmd.AccountID))
+	if err != nil {
+		s.publishBalanceResult(cfg, cmd.TransactionID, string(entities.StatusBalanceFailed))
+		return entities.NewAppError(entities.ErrTypeInternal, "failed to get balance", err)
+	}
+
+	// Check if sufficient funds
+	if balance.THBAmount < cmd.THBAmount || balance.USDTAmount < cmd.USDTAmount {
+		s.publishBalanceResult(cfg, cmd.TransactionID, string(entities.StatusBalanceFailed))
+		return entities.NewAppError(entities.ErrTypeBadRequest, "insufficient funds", nil)
+	}
+
+	// Deduct amounts
+	balance.THBAmount -= cmd.THBAmount
+	balance.USDTAmount -= cmd.USDTAmount
+
+	if err := s.balanceRepo.UpdateBalance(context.Background(), balance); err != nil {
+		s.publishBalanceResult(cfg, cmd.TransactionID, string(entities.StatusBalanceFailed))
+		return entities.NewAppError(entities.ErrTypeInternal, "failed to withdraw balance", err)
 	}
 
 	s.publishBalanceResult(cfg, cmd.TransactionID, string(entities.StatusBalanceUpdated))

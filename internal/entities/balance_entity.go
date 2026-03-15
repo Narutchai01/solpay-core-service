@@ -9,3 +9,10 @@ type BalanceEntity struct {
 	USDTAmount int64         `json:"usdt_amount" gorm:"not null;default:0"`
 	Account    AccountEntity `json:"account" gorm:"foreignKey:AccountID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
+
+type BalanceAction string
+
+const (
+	ActionDeposit  BalanceAction = "DEPOSIT"
+	ActionWithdraw BalanceAction = "WITHDRAW"
+)
