@@ -62,3 +62,10 @@ const (
 	ONCHAIN  TransactionType = "ONCHAIN"
 	OFFCHAIN TransactionType = "OFFCHAIN"
 )
+
+func (t *TransactionEntity) BeforeCreate(tx *gorm.DB) (err error) {
+	if t.TransactionUUID == uuid.Nil {
+		t.TransactionUUID = uuid.New()
+	}
+	return
+}
