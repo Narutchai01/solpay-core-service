@@ -1,16 +1,16 @@
 package request
 
 type CreateTransactionRequest struct {
-	TransactionType string `json:"transaction_type" validate:"required,oneof=top_up transaction_onchain OFFCHAIN"`
+	TransactionType string
 
-	THBAmount  float64 `json:"thb_amount" validate:"min=0"`
-	USDTAmount float64 `json:"usdt_amount" validate:"min=0"`
+	THBAmount  float64
+	USDTAmount float64
 
-	Fee float64 `json:"fee" validate:"min=0"`
+	Fee float64
 
-	PromptPayID *string `json:"propmtpayID"`
+	PromptPayID *string
 
-	TxHash *string `json:"tx_hash"`
+	TxHash *string
 }
 
 type TransactionMessage struct {

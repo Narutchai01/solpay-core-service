@@ -28,4 +28,5 @@ func (qrc *QuoteRouteConfig) Setup() {
 
 	// กำหนดเส้นทางสำหรับ Quote
 	qrc.route.Post("/", quoteHandler.CreateQuoteHandler)
+	qrc.route.Get("/:id", quoteHandler.GetQuoteByIDHandler)
 }

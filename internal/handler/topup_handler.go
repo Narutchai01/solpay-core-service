@@ -3,6 +3,7 @@ package handler
 import (
 	"github.com/Narutchai01/solpay-core-service/internal/core/services"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
+	"github.com/Narutchai01/solpay-core-service/internal/utils"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -30,10 +31,8 @@ func (h *topUpHandler) ConfirmTopUpHandler(c *fiber.Ctx) error {
 
 	tx, err := h.topUpService.ComfirmTopUp(c.Context(), req)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to confirm top-up",
-		})
+		return utils.HandleResponse(c, nil, err)
 	}
 
-	return c.JSON(tx)
+	return utils.HandleResponse(c, tx, nil)
 }

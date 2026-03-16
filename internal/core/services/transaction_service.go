@@ -10,7 +10,6 @@ import (
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
-	"github.com/Narutchai01/solpay-core-service/internal/models"
 	"github.com/google/uuid"
 )
 
@@ -19,7 +18,6 @@ type TransactionService interface {
 	CreateTransaction(ctx context.Context, req request.CreateTransactionRequest) (*entities.TransactionEntity, error)
 	GetTransactionByID(id int) (*entities.TransactionEntity, error)
 	HandleTransactionUpdate(ctx context.Context, msg []byte) error
-	CreateTransactionTopUp(ctx context.Context, req models.CreateTransactionTopUp) (*entities.TransactionEntity, error)
 }
 
 type transactionService struct {
@@ -159,9 +157,4 @@ func (s *transactionService) HandleTransactionUpdate(ctx context.Context, msg []
 	}
 
 	return nil
-}
-
-func (s *transactionService) CreateTransactionTopUp(ctx context.Context, req models.CreateTransactionTopUp) (*entities.TransactionEntity, error) {
-
-	return nil, nil
 }

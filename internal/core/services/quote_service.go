@@ -12,6 +12,7 @@ import (
 
 type QuoteService interface {
 	CreateQuote(reqQuote request.CreateQuoteRequest) (response.QuoteResponse, error)
+	GetQuoteByID(id string) (*entities.Quote, error)
 }
 
 type quoteService struct {
@@ -62,4 +63,12 @@ func (s *quoteService) CreateQuote(req request.CreateQuoteRequest) (response.Quo
 	}
 
 	return quoteResp, nil
+}
+
+func (s *quoteService) GetQuoteByID(id string) (*entities.Quote, error) {
+	quote, err := s.quoteRepo.GetQuoteByID(id)
+	if err != nil {
+		return nil, err
+	}
+	return quote, nil
 }
