@@ -25,8 +25,7 @@ func (trc *TopUpRouteConfig) Setup() {
 	transactionRepo := repositories.NewGormTransactionRepository(trc.db)
 	quoteRepo := repositories.NewGormQuoteRepository(trc.db)
 	uow := repositories.NewSqlUnitOfWork(trc.db)
-	transactionService := services.NewTransactionService(transactionRepo, uow, nil, nil)
-	topUpService := services.NewTopUpService(transactionService, transactionRepo, quoteRepo, uow)
+	topUpService := services.NewTopUpService(transactionRepo, quoteRepo, uow)
 
 	// สร้าง Handler
 	topUpHandler := handler.NewTopUpHandler(topUpService)

@@ -20,10 +20,12 @@ func (r *TopUpRequest) SetDefaultSlippage() {
 
 func (r *TopUpRequest) UnmarshalJSON(data []byte) error {
 	type payload struct {
-		QuoteID      string `json:"quote_id"`
-		QuoteIDCamel string `json:"quoteID"`
-		TxHash       string `json:"tx_hash"`
-		TxHashCamel  string `json:"txHash"`
+		QuoteID      string   `json:"quote_id"`
+		QuoteIDCamel string   `json:"quoteID"`
+		TxHash       string   `json:"tx_hash"`
+		TxHashCamel  string   `json:"txHash"`
+		MaxSlippage  *float64 `json:"max_slippage"`
+		MaxSlipCamel *float64 `json:"maxSlippage"`
 	}
 
 	var p payload
@@ -37,9 +39,13 @@ func (r *TopUpRequest) UnmarshalJSON(data []byte) error {
 	if p.TxHash == "" {
 		p.TxHash = p.TxHashCamel
 	}
+	if p.MaxSlippage == nil {
+		p.MaxSlippage = p.MaxSlipCamel
+	}
 
 	r.QuoteID = p.QuoteID
 	r.TxHash = p.TxHash
+	r.MaxSlippage = p.MaxSlippage
 
 	return nil
 }

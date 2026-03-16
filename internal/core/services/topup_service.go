@@ -9,6 +9,8 @@ import (
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
+	"github.com/Narutchai01/solpay-core-service/internal/utils"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -17,23 +19,20 @@ type TopUpService interface {
 }
 
 type topUpService struct {
-	transactionService TransactionService
-	transactionRepo    ports.TransactionRepository
-	quoteRepo          ports.QuoteRepository
-	uow                ports.UnitOfWork
+	transactionRepo ports.TransactionRepository
+	quoteRepo       ports.QuoteRepository
+	uow             ports.UnitOfWork
 }
 
 func NewTopUpService(
-	transactionService TransactionService,
 	transactionRepo ports.TransactionRepository,
 	quoteRepo ports.QuoteRepository,
 	uow ports.UnitOfWork,
 ) TopUpService {
 	return &topUpService{
-		transactionService: transactionService,
-		transactionRepo:    transactionRepo,
-		quoteRepo:          quoteRepo,
-		uow:                uow,
+		transactionRepo: transactionRepo,
+		quoteRepo:       quoteRepo,
+		uow:             uow,
 	}
 }
 
@@ -54,23 +53,47 @@ func (s *topUpService) ComfirmTopUp(ctx context.Context, req request.TopUpReques
 		return entities.TransactionEntity{}, entities.NewAppError(entities.ErrTypeBadRequest, "quote has expired", nil)
 	}
 
-	err = s.transactionService.VerifyWithSlippage(quote.ExchangeRate, 32.0, *req.MaxSlippage)
+	req.SetDefaultSlippage()
+	err = utils.VerifyWithSlippage(quote.ExchangeRate, 32.0, *req.MaxSlippage)
 	if err != nil {
 		return entities.TransactionEntity{}, entities.NewAppError(entities.ErrTypeBadRequest, "slippage too high", err)
 	}
 
-	rawTx := request.CreateTransactionRequest{
+	txUUID, err := uuid.NewV7()
+	if err != nil {
+		return entities.TransactionEntity{}, fmt.Errorf("generate UUID: %w", err)
+	}
+
+	tx := &entities.TransactionEntity{
+		TransactionUUID: txUUID,
+		AccountID:       1,
 		TransactionType: string(entities.TOPUP),
-		THBAmount:       float64(quote.THBAmount) / 100,
+		THBAmount:       float64(quote.THBAmount),
 		USDTAmount:      quote.USDTAmount,
-		TxHash:          &req.TxHash,
 		Fee:             quote.Fee,
 	}
 
-	tx, err := s.transactionService.CreateTransaction(ctx, rawTx)
+	result, err := s.uow.Execute(ctx, func(txCtx context.Context) (any, error) {
+		if err := s.transactionRepo.CreateTransaction(txCtx, tx); err != nil {
+			return nil, err
+		}
+
+		txOnChain := &entities.TransactionOnChain{
+			TransactionID: tx.TransactionUUID,
+			TxHash:        req.TxHash,
+		}
+
+		if err := s.transactionRepo.CreateTransactionOnChain(txCtx, txOnChain); err != nil {
+			return nil, err
+		}
+		return tx, nil
+	})
+
 	if err != nil {
-		return entities.TransactionEntity{}, entities.NewAppError(entities.ErrTypeInternal, "failed to create topup transaction", err)
+		return entities.TransactionEntity{}, fmt.Errorf("create transaction: %v", err)
 	}
+
+	tx = result.(*entities.TransactionEntity)
 
 	return *tx, nil
 }

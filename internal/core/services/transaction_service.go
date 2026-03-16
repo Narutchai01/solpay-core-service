@@ -18,7 +18,6 @@ type TransactionService interface {
 	CreateTransaction(ctx context.Context, req request.CreateTransactionRequest) (*entities.TransactionEntity, error)
 	GetTransactionByID(id int) (*entities.TransactionEntity, error)
 	HandleTransactionUpdate(ctx context.Context, msg []byte) error
-	VerifyWithSlippage(quoteRate float64, currentMarketRate float64, maxSlippage float64) error
 }
 
 type transactionService struct {
@@ -157,16 +156,5 @@ func (s *transactionService) HandleTransactionUpdate(ctx context.Context, msg []
 		return fmt.Errorf("update transaction status: %w", err)
 	}
 
-	return nil
-}
-
-func (s *transactionService) VerifyWithSlippage(quoteRate float64, currentMarketRate float64, maxSlippage float64) error {
-	// คำนวณส่วนต่างราคา
-	diff := ((currentMarketRate - quoteRate) / quoteRate) * 100
-
-	// ถ้าเรทเปลี่ยนไป (ในทางที่ User ขาดทุน) เกินกว่าที่ตั้งไว้
-	if diff > maxSlippage {
-		return errors.New("Slippage exceeded: Market price changed too much")
-	}
 	return nil
 }
