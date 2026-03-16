@@ -3,8 +3,19 @@ package request
 import "encoding/json"
 
 type TopUpRequest struct {
-	QuoteID string `json:"quote_id" validate:"required"`
-	TxHash  string `json:"tx_hash" validate:"required"`
+	QuoteID     string   `json:"quote_id" validate:"required"`
+	TxHash      string   `json:"tx_hash" validate:"required"`
+	MaxSlippage *float64 `json:"max_slippage,omitempty"`
+}
+
+// DefaultSlippage is the default value for MaxSlippage if not provided.
+const DefaultSlippage = 0.01
+
+func (r *TopUpRequest) SetDefaultSlippage() {
+	if r.MaxSlippage == nil {
+		r.MaxSlippage = new(float64)
+		*r.MaxSlippage = DefaultSlippage
+	}
 }
 
 func (r *TopUpRequest) UnmarshalJSON(data []byte) error {

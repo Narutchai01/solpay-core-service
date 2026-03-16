@@ -54,6 +54,11 @@ func (s *topUpService) ComfirmTopUp(ctx context.Context, req request.TopUpReques
 		return entities.TransactionEntity{}, entities.NewAppError(entities.ErrTypeBadRequest, "quote has expired", nil)
 	}
 
+	err = s.transactionService.VerifyWithSlippage(quote.ExchangeRate, 32.0, *req.MaxSlippage)
+	if err != nil {
+		return entities.TransactionEntity{}, entities.NewAppError(entities.ErrTypeBadRequest, "slippage too high", err)
+	}
+
 	rawTx := request.CreateTransactionRequest{
 		TransactionType: string(entities.TOPUP),
 		THBAmount:       float64(quote.THBAmount) / 100,
