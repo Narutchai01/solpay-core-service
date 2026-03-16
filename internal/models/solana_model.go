@@ -14,3 +14,9 @@ type SolanaTxMessage struct {
 	Base64Tx string         `json:"base64_tx"`
 	MetaData SolanaMetaData `json:"metadata"`
 }
+
+type BuildTXUnsigned struct {
+	SenderAddress string
+	Amount        uint64
+	Decimals      uint8
+}
