@@ -4,6 +4,7 @@ import (
 	"github.com/Narutchai01/solpay-core-service/internal/core/services"
 	"github.com/Narutchai01/solpay-core-service/internal/handler"
 	"github.com/Narutchai01/solpay-core-service/internal/infra/repositories"
+	"github.com/Narutchai01/solpay-core-service/internal/middlewares"
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 )
@@ -27,6 +28,6 @@ func (qrc *QuoteRouteConfig) Setup() {
 	quoteHandler := handler.NewQuoteHandler(quoteService)
 
 	// กำหนดเส้นทางสำหรับ Quote
-	qrc.route.Post("/", quoteHandler.CreateQuoteHandler)
+	qrc.route.Post("/", middlewares.AuthRequired(), quoteHandler.CreateQuoteHandler)
 	qrc.route.Get("/:id", quoteHandler.GetQuoteByIDHandler)
 }

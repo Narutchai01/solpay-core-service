@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"strconv"
+
 	"github.com/Narutchai01/solpay-core-service/internal/core/services"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	"github.com/Narutchai01/solpay-core-service/internal/utils"
@@ -22,6 +24,28 @@ func NewQuoteHandler(quoteService services.QuoteService) QuoteHandler {
 	}
 }
 
+func getUserIDFromLocals(c *fiber.Ctx) (int64, bool) {
+	userID := c.Locals("userID")
+	switch value := userID.(type) {
+	case int64:
+		return value, value > 0
+	case uint:
+		return int64(value), value > 0
+	case int:
+		return int64(value), value > 0
+	case float64:
+		return int64(value), value > 0
+	case string:
+		parsed, err := strconv.ParseInt(value, 10, 64)
+		if err != nil || parsed <= 0 {
+			return 0, false
+		}
+		return parsed, true
+	default:
+		return 0, false
+	}
+}
+
 func (h *quoteHandler) CreateQuoteHandler(c *fiber.Ctx) error {
 	var req request.CreateQuoteRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -30,7 +54,14 @@ func (h *quoteHandler) CreateQuoteHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	quoteResp, err := h.quoteService.CreateQuote(req)
+	userID, ok := getUserIDFromLocals(c)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid user context",
+		})
+	}
+
+	quoteResp, err := h.quoteService.CreateQuote(req, userID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to create quote",

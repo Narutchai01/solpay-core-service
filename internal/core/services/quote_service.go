@@ -11,7 +11,7 @@ import (
 )
 
 type QuoteService interface {
-	CreateQuote(reqQuote request.CreateQuoteRequest) (response.QuoteResponse, error)
+	CreateQuote(reqQuote request.CreateQuoteRequest, userID int64) (response.QuoteResponse, error)
 	GetQuoteByID(id string) (*entities.Quote, error)
 }
 
@@ -25,7 +25,7 @@ func NewQuoteService(quoteRepo ports.QuoteRepository) QuoteService {
 	}
 }
 
-func (s *quoteService) CreateQuote(req request.CreateQuoteRequest) (response.QuoteResponse, error) {
+func (s *quoteService) CreateQuote(req request.CreateQuoteRequest, userID int64) (response.QuoteResponse, error) {
 
 	var quote entities.Quote
 
@@ -39,7 +39,7 @@ func (s *quoteService) CreateQuote(req request.CreateQuoteRequest) (response.Quo
 	expiresAt := time.Now().Add(60 * time.Second)
 
 	quote = entities.Quote{
-		AccountID:    1, // สมมติว่าไม่มีการเชื่อมโยงกับบัญชีในตอนนี้
+		AccountID:    userID, // สมมติว่าไม่มีการเชื่อมโยงกับบัญชีในตอนนี้
 		Type:         req.ActionType,
 		THBAmount:    thbSatang,
 		USDTAmount:   usdtAmount,
