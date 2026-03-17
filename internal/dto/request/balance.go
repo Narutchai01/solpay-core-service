@@ -10,5 +10,4 @@ type UpdateBalanceCommand struct {
 	AccountID     uint   `json:"account_id"`
 	Action        string `json:"action"`
 	THBAmount     int64  `json:"thb_amount"`
-	USDTAmount    int64  `json:"usdt_amount"`
 }

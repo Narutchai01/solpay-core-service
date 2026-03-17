@@ -2,9 +2,12 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 
+	"github.com/Narutchai01/solpay-core-service/internal/config"
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
@@ -21,40 +24,41 @@ type topUpService struct {
 	transactionRepo ports.TransactionRepository
 	quoteRepo       ports.QuoteRepository
 	uow             ports.UnitOfWork
+	publisher       ports.Publisher
 }
 
 func NewTopUpService(
 	transactionRepo ports.TransactionRepository,
 	quoteRepo ports.QuoteRepository,
 	uow ports.UnitOfWork,
+	publisher ports.Publisher,
 ) TopUpService {
 	return &topUpService{
 		transactionRepo: transactionRepo,
 		quoteRepo:       quoteRepo,
 		uow:             uow,
+		publisher:       publisher,
 	}
 }
 
 func (s *topUpService) ComfirmTopUp(ctx context.Context, req request.TopUpRequest) (entities.TransactionEntity, error) {
-	if req.QuoteID == "" || req.TxHash == "" {
-		return entities.TransactionEntity{}, entities.NewAppError(entities.ErrTypeBadRequest, "quote_id and tx_hash are required", nil)
+	cfg := config.LoadConfig()
+
+	if err := validateTopUpRequest(req); err != nil {
+		return entities.TransactionEntity{}, err
 	}
 
-	quote, err := s.quoteRepo.GetQuoteByID(req.QuoteID)
+	quote, err := fetchQuote(s.quoteRepo, req.QuoteID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) || errors.Is(err, entities.ErrNotFound) {
-			return entities.TransactionEntity{}, entities.NewAppError(entities.ErrTypeNotFound, fmt.Sprintf("quote %s not found", req.QuoteID), err)
-		}
-		return entities.TransactionEntity{}, entities.NewAppError(entities.ErrTypeInternal, "failed to fetch quote", err)
+		return entities.TransactionEntity{}, err
 	}
 
-	if quote.Status != string(entities.USED) {
-		return entities.TransactionEntity{}, entities.NewAppError(entities.ErrTypeBadRequest, "quote has expired", nil)
+	if err := validateQuote(quote); err != nil {
+		return entities.TransactionEntity{}, err
 	}
 
 	req.SetDefaultSlippage()
-	err = utils.VerifyWithSlippage(quote.ExchangeRate, 32.0, *req.MaxSlippage)
-	if err != nil {
+	if err := utils.VerifyWithSlippage(quote.ExchangeRate, 32.0, *req.MaxSlippage); err != nil {
 		return entities.TransactionEntity{}, entities.NewAppError(entities.ErrTypeBadRequest, "slippage too high", err)
 	}
 
@@ -94,5 +98,53 @@ func (s *topUpService) ComfirmTopUp(ctx context.Context, req request.TopUpReques
 
 	tx = result.(*entities.TransactionEntity)
 
+	publishTransactionMessage(s.publisher, cfg.TRANSACTION_ORCHESTRATOR_QUEUE, tx)
+
 	return *tx, nil
+}
+
+// Helper functions
+
+func validateTopUpRequest(req request.TopUpRequest) error {
+	if req.QuoteID == "" || req.TxHash == "" {
+		return entities.NewAppError(entities.ErrTypeBadRequest, "quote_id and tx_hash are required", nil)
+	}
+	return nil
+}
+
+func fetchQuote(repo ports.QuoteRepository, quoteID string) (*entities.Quote, error) {
+	quote, err := repo.GetQuoteByID(quoteID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) || errors.Is(err, entities.ErrNotFound) {
+			return nil, entities.NewAppError(entities.ErrTypeNotFound, fmt.Sprintf("quote %s not found", quoteID), err)
+		}
+		return nil, entities.NewAppError(entities.ErrTypeInternal, "failed to fetch quote", err)
+	}
+	return quote, nil
+}
+
+func validateQuote(quote *entities.Quote) error {
+
+	if quote.Status != string(entities.USED) {
+		return entities.NewAppError(entities.ErrTypeBadRequest, "quote has expired", nil)
+	}
+	return nil
+}
+
+func publishTransactionMessage(publisher ports.Publisher, queue string, tx *entities.TransactionEntity) {
+	msg := request.TransactionMessage{
+		TxID:         tx.TransactionUUID.String(),
+		SourceWorker: "ORCHESTRATOR",
+		Status:       string(entities.StatusSolanaSubmitted),
+	}
+
+	jsonMessage, err := json.Marshal(msg)
+	if err != nil {
+		log.Printf("Failed to marshal balance result message: %v", err)
+		return
+	}
+
+	if err := publisher.Publish(queue, jsonMessage); err != nil {
+		log.Printf("Failed to publish balance result: %v", err)
+	}
 }
