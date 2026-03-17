@@ -168,7 +168,7 @@ func (s *transactionService) routeEvent(ctx context.Context, tx *entities.Transa
 	case string(entities.TOPUP):
 		return s.topupWorkflow(ctx, tx, event)
 	case string(entities.OFFCHAIN):
-		return nil
+		return s.paymentWorkflow(ctx, tx, event)
 	default:
 		return nil
 	}
@@ -186,8 +186,28 @@ func (s *transactionService) topupWorkflow(ctx context.Context, tx *entities.Tra
 			return fmt.Errorf("update transaction status: %w", err)
 		}
 	case string(entities.StatusSolanaSuccess):
-		return s.publishBalanceTransaction(tx)
+		return s.publishBalanceTransaction(tx, string(entities.ActionDeposit))
 	case string(entities.StatusBalanceUpdated):
+		if err := s.transactionRepo.UpdateTransactionStatus(ctx, tx.TransactionUUID.String(), string(entities.StatusCompleted)); err != nil {
+			return fmt.Errorf("update transaction status: %w", err)
+		}
+	default:
+		return fmt.Errorf("unhandled transaction status: %s", event.Status)
+	}
+
+	return nil
+}
+
+func (s *transactionService) paymentWorkflow(ctx context.Context, tx *entities.TransactionEntity, event request.TransactionMessage) error {
+	switch event.Status {
+	case string(entities.StatusBalanceUpdating):
+		return s.publishBalanceTransaction(tx, string(entities.ActionWithdraw))
+	case string(entities.StatusBalanceUpdated):
+		if err := s.transactionRepo.UpdateTransactionStatus(ctx, tx.TransactionUUID.String(), string(entities.StatusBalanceUpdated)); err != nil {
+			return fmt.Errorf("update transaction status: %w", err)
+		}
+		return s.publishPaymentTransaction(tx)
+	case string(entities.StatusPaymentSuccess):
 		if err := s.transactionRepo.UpdateTransactionStatus(ctx, tx.TransactionUUID.String(), string(entities.StatusCompleted)); err != nil {
 			return fmt.Errorf("update transaction status: %w", err)
 		}
@@ -227,7 +247,7 @@ func (s *transactionService) publishBlockchainTransaction(tx *entities.Transacti
 	return s.publisher.Publish(cfg.SOLANA_WORK_QUEUE, jsonMsg)
 }
 
-func (s *transactionService) publishBalanceTransaction(tx *entities.TransactionEntity) error {
+func (s *transactionService) publishBalanceTransaction(tx *entities.TransactionEntity, action string) error {
 	if s.publisher == nil {
 		return entities.NewAppError(entities.ErrTypeInternal, "publisher is not configured", nil)
 	}
@@ -237,7 +257,32 @@ func (s *transactionService) publishBalanceTransaction(tx *entities.TransactionE
 		AccountID:     uint(tx.AccountID),
 		TransactionID: tx.TransactionUUID.String(),
 		THBAmount:     int64(tx.THBAmount),
-		Action:        string(entities.ActionDeposit),
+		Action:        action,
+	}
+
+	jsonMsg, err := json.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("marshal balance message: %w", err)
+	}
+
+	err = s.publisher.Publish(cfg.BALANCE_QUEUE, jsonMsg)
+	if err != nil {
+		return fmt.Errorf("publish balance message: %w", err)
+	}
+
+	return nil
+}
+
+func (s *transactionService) publishPaymentTransaction(tx *entities.TransactionEntity) error {
+	if s.publisher == nil {
+		return entities.NewAppError(entities.ErrTypeInternal, "publisher is not configured", nil)
+	}
+
+	cfg := config.LoadConfig()
+	msg := request.RequestPaymentQueue{
+		TransactionID: string(tx.TransactionUUID.String()),
+		Amount:        int64(tx.THBAmount),
+		Number:        tx.TransactionOffChain.PromptPayID,
 	}
 
 	jsonMsg, err := json.Marshal(msg)
