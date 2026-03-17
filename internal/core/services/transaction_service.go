@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 
+	"github.com/Narutchai01/solpay-core-service/internal/config"
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
+	"github.com/Narutchai01/solpay-core-service/internal/models"
 	"github.com/google/uuid"
 )
 
@@ -147,13 +148,90 @@ func (s *transactionService) HandleTransactionUpdate(ctx context.Context, msg []
 		return fmt.Errorf("get transaction by UUID: %w", err)
 	}
 
-	if tx.Status == event.Status {
-		log.Printf("Transaction %s already has status %s, skipping", event.TxID, event.Status)
-		return errors.New("transaction already processed")
-	}
+	// if tx.Status == event.Status {
+	// 	log.Printf("Transaction %s already has status %s, skipping", event.TxID, event.Status)
+	// 	return errors.New("transaction already processed")
+	// }
 
 	if err := s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, event.Status); err != nil {
 		return fmt.Errorf("update transaction status: %w", err)
+	}
+
+	return s.routeEvent(ctx, tx, event)
+}
+
+func (s *transactionService) routeEvent(ctx context.Context, tx *entities.TransactionEntity, event request.TransactionMessage) error {
+	switch tx.TransactionType {
+	case string(entities.TOPUP):
+		return s.topupWorkflow(ctx, tx, event)
+	case string(entities.OFFCHAIN):
+		return nil
+	default:
+		return nil
+	}
+}
+
+func (s *transactionService) topupWorkflow(ctx context.Context, tx *entities.TransactionEntity, event request.TransactionMessage) error {
+	switch event.Status {
+	case string(entities.StatusPending):
+		err := s.transactionRepo.UpdateTransactionStatus(ctx, tx.TransactionUUID.String(), string(entities.StatusSolanaSubmitted))
+		if err != nil {
+			return fmt.Errorf("update transaction status: %w", err)
+		}
+		return s.publishBlockchainTransaction(tx)
+	case string(entities.StatusSolanaFailed):
+		err := s.transactionRepo.UpdateTransactionStatus(ctx, tx.TransactionUUID.String(), string(entities.StatusSolanaFailed))
+		if err != nil {
+			return fmt.Errorf("update transaction status: %w", err)
+		}
+	case string(entities.StatusSolanaSuccess):
+		return s.publishBalacneTransaction(tx)
+	}
+
+	return nil
+}
+
+func (s *transactionService) publishBlockchainTransaction(tx *entities.TransactionEntity) error {
+	cfg := config.LoadConfig()
+
+	msg := models.SolanaTxMessage{
+		TxID:     tx.TransactionUUID.String(),
+		Base64Tx: tx.TransactionOnChain.TxHash,
+		MetaData: models.SolanaMetaData{
+			TransactionType: tx.TransactionType,
+			AmountTHB:       int(tx.THBAmount),
+			AmountUSDC:      int(tx.USDTAmount),
+			AccountID:       int(tx.AccountID),
+		},
+	}
+
+	jsonMsg, err := json.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("marshal solana tx message: %w", err)
+	}
+
+	return s.publisher.Publish(cfg.SOLANA_WORK_QUEUE, jsonMsg)
+}
+
+func (s *transactionService) publishBalacneTransaction(tx *entities.TransactionEntity) error {
+
+	cfg := config.LoadConfig()
+	msg := request.UpdateBalanceCommand{
+		AccountID:     uint(tx.AccountID),
+		TransactionID: tx.TransactionUUID.String(),
+		THBAmount:     int64(tx.THBAmount),
+		USDTAmount:    int64(tx.USDTAmount),
+		Action:        string(entities.ActionDeposit),
+	}
+
+	jsonMsg, err := json.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("marshal balance message: %w", err)
+	}
+
+	err = s.publisher.Publish(cfg.BALANCE_QUEUE, jsonMsg)
+	if err != nil {
+		return fmt.Errorf("publish balance message: %w", err)
 	}
 
 	return nil
