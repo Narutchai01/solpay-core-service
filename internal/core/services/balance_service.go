@@ -110,7 +110,6 @@ func (s *balanceService) Deposit(data []byte) error {
 
 	// Add amounts
 	balance.THBAmount += cmd.THBAmount
-	balance.USDTAmount += cmd.USDTAmount
 
 	if err := s.balanceRepo.UpdateBalance(context.Background(), balance); err != nil {
 		s.publishBalanceResult(cfg, cmd.TransactionID, string(entities.StatusBalanceFailed))
@@ -138,14 +137,13 @@ func (s *balanceService) WithDraw(data []byte) error {
 	}
 
 	// Check if sufficient funds
-	if balance.THBAmount < cmd.THBAmount || balance.USDTAmount < cmd.USDTAmount {
+	if balance.THBAmount < cmd.THBAmount {
 		s.publishBalanceResult(cfg, cmd.TransactionID, string(entities.StatusBalanceFailed))
 		return entities.NewAppError(entities.ErrTypeBadRequest, "insufficient funds", nil)
 	}
 
 	// Deduct amounts
 	balance.THBAmount -= cmd.THBAmount
-	balance.USDTAmount -= cmd.USDTAmount
 
 	if err := s.balanceRepo.UpdateBalance(context.Background(), balance); err != nil {
 		s.publishBalanceResult(cfg, cmd.TransactionID, string(entities.StatusBalanceFailed))

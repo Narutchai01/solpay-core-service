@@ -19,12 +19,11 @@ func FormatBalanceDTO(balance *entities.BalanceEntity) *BalanceDTO {
 	const divisor = 10000.0
 
 	return &BalanceDTO{
-		ID:         balance.ID,
-		AccountID:  balance.AccountID,
-		THBAmount:  float64(balance.THBAmount) / divisor,
-		USDTAmount: float64(balance.USDTAmount) / divisor,
-		CreatedAt:  balance.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt:  balance.UpdatedAt.Format("2006-01-02 15:04:05"),
+		ID:        balance.ID,
+		AccountID: balance.AccountID,
+		THBAmount: float64(balance.THBAmount) / divisor,
+		CreatedAt: balance.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt: balance.UpdatedAt.Format("2006-01-02 15:04:05"),
 	}
 }
 
