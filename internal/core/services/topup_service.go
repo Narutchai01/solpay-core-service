@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
@@ -49,7 +48,7 @@ func (s *topUpService) ComfirmTopUp(ctx context.Context, req request.TopUpReques
 		return entities.TransactionEntity{}, entities.NewAppError(entities.ErrTypeInternal, "failed to fetch quote", err)
 	}
 
-	if time.Now().After(quote.ExpiresAt) {
+	if quote.Status != string(entities.USED) {
 		return entities.TransactionEntity{}, entities.NewAppError(entities.ErrTypeBadRequest, "quote has expired", nil)
 	}
 

@@ -25,3 +25,11 @@ func (q *Quote) BeforeCreate(tx *gorm.DB) (err error) {
 	q.ID = "q_" + uuid.New().String()
 	return
 }
+
+type QuoteStatus string
+
+const (
+	ACTIVE  QuoteStatus = "ACTIVE"
+	EXPIRED QuoteStatus = "EXPIRED"
+	USED    QuoteStatus = "USED"
+)

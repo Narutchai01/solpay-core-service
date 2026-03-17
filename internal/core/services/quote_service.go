@@ -64,7 +64,7 @@ func (s *quoteService) CreateQuote(req request.CreateQuoteRequest, userID int64)
 		USDTAmount:   usdtAmount,
 		ExchangeRate: currentRate,
 		ExpiresAt:    expiresAt,
-		Status:       "PENDING",
+		Status:       string(entities.ACTIVE),
 		Fee:          fee,
 	}
 
@@ -139,7 +139,7 @@ func (s *quoteService) ConFirmQuote(id string, accountID int64) (string, error) 
 		return "", entities.NewAppError(entities.ErrTypeInternal, "empty unsigned transaction payload", nil)
 	}
 
-	quote.Status = "CONFIRM"
+	quote.Status = string(entities.USED)
 
 	err = s.quoteRepo.UpdateQuote(quote)
 	if err != nil {
