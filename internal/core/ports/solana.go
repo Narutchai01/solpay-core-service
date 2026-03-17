@@ -7,5 +7,5 @@ import (
 )
 
 type SolanaClient interface {
-	BuildUnsignedTransfer(ctx context.Context, req models.BuildTXUnsigned) (*string, error)
+	BuildUnsignedTransfer(ctx context.Context, req models.BuildTXUnsigned) (string, error)
 }

@@ -28,3 +28,10 @@ func (r *gormQuoteRepository) GetQuoteByID(quoteID string) (*entities.Quote, err
 	}
 	return &quote, nil
 }
+
+func (r *gormQuoteRepository) UpdateQuote(quote *entities.Quote) error {
+	if err := r.db.Save(quote).Error; err != nil {
+		return err
+	}
+	return nil
+}

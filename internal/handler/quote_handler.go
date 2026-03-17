@@ -10,6 +10,7 @@ import (
 type QuoteHandler interface {
 	CreateQuoteHandler(c *fiber.Ctx) error
 	GetQuoteByIDHandler(c *fiber.Ctx) error
+	ConFirmQuoteHandler(c *fiber.Ctx) error
 }
 
 type quoteHandler struct {
@@ -55,4 +56,22 @@ func (h *quoteHandler) GetQuoteByIDHandler(c *fiber.Ctx) error {
 	}
 
 	return utils.HandleResponse(c, quote, nil, "receive quote by id successfully")
+}
+
+func (h *quoteHandler) ConFirmQuoteHandler(c *fiber.Ctx) error {
+	quoteID := c.Params("id")
+
+	userID, ok := utils.GetUserIDFromLocals(c)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid user context",
+		})
+	}
+
+	txHash, err := h.quoteService.ConFirmQuote(quoteID, userID)
+	if err != nil {
+		return utils.HandleResponse(c, nil, err)
+	}
+
+	return utils.HandleResponse(c, fiber.Map{"tx_hash": txHash}, nil, "confirm quote successfully")
 }

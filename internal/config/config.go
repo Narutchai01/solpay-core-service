@@ -28,6 +28,7 @@ type Config struct {
 	OMISE_SECRET                   string
 	MINT_TOKEN_ADDRESS             string
 	RECEIVE_ADDRESS                string
+	RPC_URL                        string
 }
 
 func GetEnv(key string, fallback ...string) string {
@@ -67,5 +68,6 @@ func LoadConfig() *Config {
 		OMISE_SECRET:                   GetEnv("OMISE_SECRET"),
 		MINT_TOKEN_ADDRESS:             GetEnv("MINT_TOKEN_ADDRESS"),
 		RECEIVE_ADDRESS:                GetEnv("RECEIVE_ADDRESS"),
+		RPC_URL:                        GetEnv("RPC_URL", "https://api.devnet.solana.com"),
 	}
 }
