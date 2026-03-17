@@ -52,9 +52,8 @@ func (s *accountService) CreateAccount(ctx context.Context, req request.CreateAc
 		}
 
 		balance := &entities.BalanceEntity{
-			AccountID:  account.ID,
-			THBAmount:  0,
-			USDTAmount: 0,
+			AccountID: account.ID,
+			THBAmount: 0,
 		}
 		if err := s.balanceRepo.CreateBalance(txCtx, balance); err != nil {
 			return nil, err

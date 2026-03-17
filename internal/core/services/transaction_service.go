@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/Narutchai01/solpay-core-service/internal/config"
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
@@ -78,23 +77,7 @@ func (s *transactionService) CreateTransaction(ctx context.Context, req request.
 
 	tx := result.(*entities.TransactionEntity)
 
-	if err := s.publishAfterCreate(tx); err != nil {
-		return nil, err
-	}
-
 	return tx, nil
-}
-
-// publishAfterCreate sends the initial MQ message for the appropriate transaction type.
-func (s *transactionService) publishAfterCreate(tx *entities.TransactionEntity) error {
-	switch tx.TransactionType {
-	case string(entities.TOPUP):
-		return s.publishBlockchainTransaction(tx.TransactionUUID)
-	case string(entities.OFFCHAIN):
-		return s.publishOffChainTransaction(tx.TransactionUUID)
-	default:
-		return nil
-	}
 }
 
 // createSubTransactions creates the type-specific child records within the UoW.
@@ -149,14 +132,14 @@ func (s *transactionService) GetTransactionByID(id int) (*entities.TransactionEn
 	return tx, nil
 }
 
-// ---------------------------------------------------------------------------
-// HandleTransactionUpdate (orchestrator)
-// ---------------------------------------------------------------------------
-
 func (s *transactionService) HandleTransactionUpdate(ctx context.Context, msg []byte) error {
 	var event request.TransactionMessage
 	if err := json.Unmarshal(msg, &event); err != nil {
 		return fmt.Errorf("unmarshal transaction message: %w", err)
+	}
+
+	if event.TxID == "" || event.Status == "" {
+		return entities.NewAppError(entities.ErrTypeBadRequest, "tx_id and status are required", nil)
 	}
 
 	txUUID, err := uuid.Parse(event.TxID)
@@ -170,8 +153,7 @@ func (s *transactionService) HandleTransactionUpdate(ctx context.Context, msg []
 	}
 
 	if tx.Status == event.Status {
-		log.Printf("Transaction %s already has status %s, skipping", event.TxID, event.Status)
-		return errors.New("transaction already processed")
+		return nil
 	}
 
 	if err := s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, event.Status); err != nil {
@@ -181,127 +163,70 @@ func (s *transactionService) HandleTransactionUpdate(ctx context.Context, msg []
 	return s.routeEvent(ctx, tx, event)
 }
 
-// routeEvent dispatches to the correct workflow based on transaction type.
 func (s *transactionService) routeEvent(ctx context.Context, tx *entities.TransactionEntity, event request.TransactionMessage) error {
 	switch tx.TransactionType {
 	case string(entities.TOPUP):
-		return s.topUpWorkflow(ctx, tx, event)
+		return s.topupWorkflow(ctx, tx, event)
 	case string(entities.OFFCHAIN):
-		return s.offchainWorkflow(ctx, event)
+		return s.paymentWorkflow(ctx, tx, event)
 	default:
 		return nil
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Top-up workflow
-// ---------------------------------------------------------------------------
-
-func (s *transactionService) topUpWorkflow(ctx context.Context, tx *entities.TransactionEntity, event request.TransactionMessage) error {
-	switch event.SourceWorker {
-	case "SOLANA":
-		return s.handleSolanaWorker(ctx, tx, event)
-	case "BALANCE":
-		return s.handleBalanceWorker(ctx, event)
-	default:
-		return nil
-	}
-}
-
-func (s *transactionService) handleSolanaWorker(ctx context.Context, tx *entities.TransactionEntity, event request.TransactionMessage) error {
-	cfg := config.LoadConfig()
-
+func (s *transactionService) topupWorkflow(ctx context.Context, tx *entities.TransactionEntity, event request.TransactionMessage) error {
 	switch event.Status {
-	case string(entities.StatusSolanaSuccess):
-		cmd := request.UpdateBalanceCommand{
-			TransactionID: tx.TransactionUUID.String(),
-			AccountID:     tx.AccountID,
-			THBAmount:     int64(tx.THBAmount),
-			USDTAmount:    int64(tx.USDTAmount),
+	case string(entities.StatusSolanaSubmitted):
+		if err := s.transactionRepo.UpdateTransactionStatus(ctx, tx.TransactionUUID.String(), string(entities.StatusSolanaSubmitted)); err != nil {
+			return fmt.Errorf("update transaction status: %w", err)
 		}
-
-		jsonMsg, err := json.Marshal(cmd)
-		if err != nil {
-			return fmt.Errorf("marshal balance command: %w", err)
-		}
-
-		if err := s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, string(entities.StatusBalanceUpdating)); err != nil {
-			return fmt.Errorf("update status to BALANCE_UPDATING: %w", err)
-		}
-
-		if err := s.publisher.Publish(cfg.BALANCE_QUEUE, jsonMsg); err != nil {
-			return fmt.Errorf("publish balance command: %w", err)
-		}
-		s.notifyStatus(event.TxID, "BALANCE_UPDATING")
-
+		return s.publishBlockchainTransaction(tx)
 	case string(entities.StatusSolanaFailed):
-		if err := s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, string(entities.StatusRefunded)); err != nil {
-			return fmt.Errorf("update status to REFUNDED: %w", err)
+		if err := s.transactionRepo.UpdateTransactionStatus(ctx, tx.TransactionUUID.String(), string(entities.StatusSolanaFailed)); err != nil {
+			return fmt.Errorf("update transaction status: %w", err)
 		}
-		s.notifyStatus(event.TxID, "FAILED")
-	}
-
-	return nil
-}
-
-func (s *transactionService) handleBalanceWorker(ctx context.Context, event request.TransactionMessage) error {
-	switch event.Status {
+	case string(entities.StatusSolanaSuccess):
+		return s.publishBalanceTransaction(tx, string(entities.ActionDeposit))
 	case string(entities.StatusBalanceUpdated):
-		if err := s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, string(entities.StatusCompleted)); err != nil {
-			return fmt.Errorf("update status to COMPLETED: %w", err)
+		if err := s.transactionRepo.UpdateTransactionStatus(ctx, tx.TransactionUUID.String(), string(entities.StatusCompleted)); err != nil {
+			return fmt.Errorf("update transaction status: %w", err)
 		}
-		s.notifyStatus(event.TxID, "COMPLETED")
-
-	case string(entities.StatusBalanceFailed):
-		if err := s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, string(entities.StatusRefunded)); err != nil {
-			return fmt.Errorf("update status to REFUNDED: %w", err)
-		}
-		s.notifyStatus(event.TxID, "REFUNDED")
+	default:
+		return fmt.Errorf("unhandled transaction status: %s", event.Status)
 	}
 
 	return nil
 }
 
-// ---------------------------------------------------------------------------
-// Off-chain workflow
-// ---------------------------------------------------------------------------
-
-func (s *transactionService) offchainWorkflow(ctx context.Context, event request.TransactionMessage) error {
-	if event.SourceWorker == "PAYMENT" {
-		return s.handlePaymentWorker(ctx, event)
-	}
-	return nil
-}
-
-func (s *transactionService) handlePaymentWorker(ctx context.Context, event request.TransactionMessage) error {
+func (s *transactionService) paymentWorkflow(ctx context.Context, tx *entities.TransactionEntity, event request.TransactionMessage) error {
 	switch event.Status {
+	case string(entities.StatusBalanceUpdating):
+		return s.publishBalanceTransaction(tx, string(entities.ActionWithdraw))
+	case string(entities.StatusBalanceUpdated):
+		if err := s.transactionRepo.UpdateTransactionStatus(ctx, tx.TransactionUUID.String(), string(entities.StatusBalanceUpdated)); err != nil {
+			return fmt.Errorf("update transaction status: %w", err)
+		}
+		return s.publishPaymentTransaction(tx)
 	case string(entities.StatusPaymentSuccess):
-		if err := s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, string(entities.StatusCompleted)); err != nil {
-			return fmt.Errorf("update status to COMPLETED: %w", err)
+		if err := s.transactionRepo.UpdateTransactionStatus(ctx, tx.TransactionUUID.String(), string(entities.StatusCompleted)); err != nil {
+			return fmt.Errorf("update transaction status: %w", err)
 		}
-		s.notifyStatus(event.TxID, "COMPLETED")
-
-	case string(entities.StatusPaymentFailed):
-		if err := s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, string(entities.StatusRefunded)); err != nil {
-			return fmt.Errorf("update status to REFUNDED: %w", err)
-		}
-		s.notifyStatus(event.TxID, "FAILED")
+	default:
+		return fmt.Errorf("unhandled transaction status: %s", event.Status)
 	}
 
 	return nil
 }
 
-// ---------------------------------------------------------------------------
-// MQ publishing helpers
-// ---------------------------------------------------------------------------
-
-func (s *transactionService) publishBlockchainTransaction(txUUID uuid.UUID) error {
-	cfg := config.LoadConfig()
-
-	tx, err := s.transactionRepo.GetTransactionByUUID(txUUID)
-	if err != nil {
-		return fmt.Errorf("get transaction for blockchain publish: %w", err)
+func (s *transactionService) publishBlockchainTransaction(tx *entities.TransactionEntity) error {
+	if s.publisher == nil {
+		return entities.NewAppError(entities.ErrTypeInternal, "publisher is not configured", nil)
 	}
+	if tx.TransactionOnChain == nil || tx.TransactionOnChain.TxHash == "" {
+		return entities.NewAppError(entities.ErrTypeBadRequest, "missing on-chain transaction payload", nil)
+	}
+
+	cfg := config.LoadConfig()
 
 	msg := models.SolanaTxMessage{
 		TxID:     tx.TransactionUUID.String(),
@@ -322,33 +247,53 @@ func (s *transactionService) publishBlockchainTransaction(txUUID uuid.UUID) erro
 	return s.publisher.Publish(cfg.SOLANA_WORK_QUEUE, jsonMsg)
 }
 
-func (s *transactionService) publishOffChainTransaction(txUUID uuid.UUID) error {
-	cfg := config.LoadConfig()
-
-	tx, err := s.transactionRepo.GetTransactionByUUID(txUUID)
-	if err != nil {
-		return fmt.Errorf("get transaction for off-chain publish: %w", err)
+func (s *transactionService) publishBalanceTransaction(tx *entities.TransactionEntity, action string) error {
+	if s.publisher == nil {
+		return entities.NewAppError(entities.ErrTypeInternal, "publisher is not configured", nil)
 	}
 
-	msg := request.RequestPaymentQueue{
+	cfg := config.LoadConfig()
+	msg := request.UpdateBalanceCommand{
+		AccountID:     uint(tx.AccountID),
 		TransactionID: tx.TransactionUUID.String(),
-		Number:        tx.TransactionOffChain.PromptPayID,
-		Amount:        int64(tx.THBAmount),
+		THBAmount:     int64(tx.THBAmount),
+		Action:        action,
 	}
 
 	jsonMsg, err := json.Marshal(msg)
 	if err != nil {
-		return fmt.Errorf("marshal payment queue message: %w", err)
+		return fmt.Errorf("marshal balance message: %w", err)
 	}
 
-	return s.publisher.Publish(cfg.PAYMENT_QUEUE, jsonMsg)
+	err = s.publisher.Publish(cfg.BALANCE_QUEUE, jsonMsg)
+	if err != nil {
+		return fmt.Errorf("publish balance message: %w", err)
+	}
+
+	return nil
 }
 
-// notifyStatus sends a WebSocket notification if a hub is configured.
-func (s *transactionService) notifyStatus(txID, status string) {
-	if s.wsHub == nil {
-		return
+func (s *transactionService) publishPaymentTransaction(tx *entities.TransactionEntity) error {
+	if s.publisher == nil {
+		return entities.NewAppError(entities.ErrTypeInternal, "publisher is not configured", nil)
 	}
-	payload := fmt.Sprintf(`{"status":%q}`, status)
-	s.wsHub.NotifyTransactionStatus(txID, []byte(payload))
+
+	cfg := config.LoadConfig()
+	msg := request.RequestPaymentQueue{
+		TransactionID: string(tx.TransactionUUID.String()),
+		Amount:        int64(tx.THBAmount),
+		Number:        tx.TransactionOffChain.PromptPayID,
+	}
+
+	jsonMsg, err := json.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("marshal balance message: %w", err)
+	}
+
+	err = s.publisher.Publish(cfg.BALANCE_QUEUE, jsonMsg)
+	if err != nil {
+		return fmt.Errorf("publish balance message: %w", err)
+	}
+
+	return nil
 }

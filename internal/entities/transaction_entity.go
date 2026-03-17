@@ -39,18 +39,20 @@ type TransactionOffChain struct {
 type TransactionStatus string
 
 const (
-	StatusPending         TransactionStatus = "PENDING"              // เริ่มต้น
-	StatusSolanaSubmitted TransactionStatus = "SOLANA_SUBMITTED"     // ส่งไป Solana Worker แล้ว
-	StatusSolanaSuccess   TransactionStatus = "BLOCKCHAIN_COMPLETED" // Solana ตัดเงินสำเร็จ
-	StatusSolanaFailed    TransactionStatus = "SOLANA_FAILED"        // Solana ตัดเงินไม่ผ่าน
-	StatusBalanceUpdating TransactionStatus = "BALANCE_UPDATING"     // กำลังอัปเดตยอดเงิน
-	StatusBalanceUpdated  TransactionStatus = "BALANCE_UPDATED"      // อัปเดตยอดเงินเสร็จแล้ว
-	StatusRefunding       TransactionStatus = "REFUNDING"            // กำลังคืนเงิน
-	StatusBalanceFailed   TransactionStatus = "BALANCE_FAILED"       // อัปเดตยอดเงินไม่ผ่าน
-	StatusCompleted       TransactionStatus = "COMPLETED"            // ทุกอย่างสมบูรณ์
-	StatusRefunded        TransactionStatus = "REFUNDED"             // เกิดข้อผิดพลาดและคืนเงินแล้ว
-	StatusPaymentSuccess  TransactionStatus = "PAYMENT_SUCCESS"
-	StatusPaymentFailed   TransactionStatus = "PAYMENT_FAILED"
+	StatusPending            TransactionStatus = "PENDING"              // เริ่มต้น
+	StatusSolanaSubmitted    TransactionStatus = "SOLANA_SUBMITTED"     // ส่งไป Solana Worker แล้ว
+	StatusSolanaSuccess      TransactionStatus = "BLOCKCHAIN_COMPLETED" // Solana ตัดเงินสำเร็จ
+	StatusSolanaFailed       TransactionStatus = "SOLANA_FAILED"        // Solana ตัดเงินไม่ผ่าน
+	StatusBalanceUpdating    TransactionStatus = "BALANCE_UPDATING"     // กำลังอัปเดตยอดเงิน
+	StatusBalanceUpdated     TransactionStatus = "BALANCE_UPDATED"      // อัปเดตยอดเงินเสร็จแล้ว
+	StatusBalanceWithdrawing TransactionStatus = "BALANCE_WITHDRAWING"  // กำลังหักยอดเงิน (สำหรับถอนเงิน)
+	StatusBalanceWithdrawn   TransactionStatus = "BALANCE_WITHDRAWN"    // ยอดเงินถูกหักแล้ว (สำหรับถอนเงิน)
+	StatusRefunding          TransactionStatus = "REFUNDING"            // กำลังคืนเงิน
+	StatusBalanceFailed      TransactionStatus = "BALANCE_FAILED"       // อัปเดตยอดเงินไม่ผ่าน
+	StatusCompleted          TransactionStatus = "COMPLETED"            // ทุกอย่างสมบูรณ์
+	StatusRefunded           TransactionStatus = "REFUNDED"             // เกิดข้อผิดพลาดและคืนเงินแล้ว
+	StatusPaymentSuccess     TransactionStatus = "PAYMENT_SUCCESS"
+	StatusPaymentFailed      TransactionStatus = "PAYMENT_FAILED"
 )
 
 type TransactionType string
@@ -60,3 +62,10 @@ const (
 	ONCHAIN  TransactionType = "ONCHAIN"
 	OFFCHAIN TransactionType = "OFFCHAIN"
 )
+
+func (t *TransactionEntity) BeforeCreate(tx *gorm.DB) (err error) {
+	if t.TransactionUUID == uuid.Nil {
+		t.TransactionUUID = uuid.New()
+	}
+	return
+}

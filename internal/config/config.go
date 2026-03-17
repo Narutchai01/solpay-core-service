@@ -26,6 +26,9 @@ type Config struct {
 	PAYMENT_QUEUE                  string
 	OMISE_KEY                      string
 	OMISE_SECRET                   string
+	MINT_TOKEN_ADDRESS             string
+	RECEIVE_ADDRESS                string
+	RPC_URL                        string
 }
 
 func GetEnv(key string, fallback ...string) string {
@@ -63,5 +66,8 @@ func LoadConfig() *Config {
 		PAYMENT_QUEUE:                  GetEnv("CORE_PAYMENT_QUEUE", "core.payment.update"),
 		OMISE_KEY:                      GetEnv("OMISE_KEY"),
 		OMISE_SECRET:                   GetEnv("OMISE_SECRET"),
+		MINT_TOKEN_ADDRESS:             GetEnv("MINT_TOKEN_ADDRESS"),
+		RECEIVE_ADDRESS:                GetEnv("RECEIVE_ADDRESS"),
+		RPC_URL:                        GetEnv("RPC_URL", "https://api.devnet.solana.com"),
 	}
 }

@@ -48,6 +48,8 @@ func (c *consumer) TransactionOrchestrator() error {
 		return fmt.Errorf("consume transaction orchestrator queue: %w", err)
 	}
 
+	log.Printf("Transaction orchestrator consumer started.")
+
 	for msg := range msgs {
 		log.Printf("Received message from transaction orchestrator queue: %s", string(msg.Body))
 		if err := c.transactionService.HandleTransactionUpdate(context.Background(), msg.Body); err != nil {

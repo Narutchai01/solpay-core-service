@@ -56,6 +56,7 @@ func ConnectDB() (*gorm.DB, error) {
 		&entities.TransactionOffChain{},
 		&entities.Recipient{},
 		&entities.LogPayment{},
+		&entities.Quote{},
 	); err != nil {
 		return nil, fmt.Errorf("auto-migrate: %w", err)
 	}
