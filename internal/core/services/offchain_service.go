@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Narutchai01/solpay-core-service/internal/config"
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
@@ -17,16 +18,20 @@ type OffChainService interface {
 type offChainService struct {
 	transactionRepo ports.TransactionRepository
 	uow             ports.UnitOfWork
+	publisher       ports.Publisher
 }
 
-func NewOffChainService(transactionRepo ports.TransactionRepository, uow ports.UnitOfWork) OffChainService {
+func NewOffChainService(transactionRepo ports.TransactionRepository, uow ports.UnitOfWork, publisher ports.Publisher) OffChainService {
 	return &offChainService{
 		transactionRepo: transactionRepo,
 		uow:             uow,
+		publisher:       publisher,
 	}
 }
 
 func (s *offChainService) ComFirmOffchain(ctx context.Context, req request.OffChainRequest) (entities.TransactionEntity, error) {
+
+	cfg := config.LoadConfig()
 
 	txUUID, err := uuid.NewV7()
 	if err != nil {
@@ -63,6 +68,8 @@ func (s *offChainService) ComFirmOffchain(ctx context.Context, req request.OffCh
 	}
 
 	tx = result.(*entities.TransactionEntity)
+
+	s.publisher.PublishTransactionMessage(cfg.TRANSACTION_ORCHESTRATOR_QUEUE, tx, string(entities.StatusBalanceWithdrawing))
 
 	return *tx, nil
 }
