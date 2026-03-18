@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/Narutchai01/solpay-core-service/internal/config"
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
@@ -159,8 +160,8 @@ func (s *transactionService) HandleTransactionUpdate(ctx context.Context, msg []
 		return nil
 	}
 
-	if err := s.transactionRepo.UpdateTransactionStatus(ctx, event.TxID, event.Status); err != nil {
-		return fmt.Errorf(errUpdateTransactionStatusFmt, err)
+	if err := s.updateStatusAndNotify(ctx, event.TxID, event.Status); err != nil {
+		return err
 	}
 
 	return s.routeEvent(ctx, tx, event)
@@ -172,6 +173,8 @@ func (s *transactionService) routeEvent(ctx context.Context, tx *entities.Transa
 		return s.topupWorkflow(ctx, tx, event)
 	case string(entities.OFFCHAIN):
 		return s.offchainWorkflow(ctx, tx, event)
+	case string(entities.ONCHAIN):
+		return s.onchainWorkflow(ctx, tx, event)
 	default:
 		return nil
 	}
@@ -180,19 +183,19 @@ func (s *transactionService) routeEvent(ctx context.Context, tx *entities.Transa
 func (s *transactionService) topupWorkflow(ctx context.Context, tx *entities.TransactionEntity, event request.TransactionMessage) error {
 	switch event.Status {
 	case string(entities.StatusSolanaSubmitted):
-		if err := s.transactionRepo.UpdateTransactionStatus(ctx, tx.TransactionUUID.String(), string(entities.StatusSolanaSubmitted)); err != nil {
-			return fmt.Errorf(errUpdateTransactionStatusFmt, err)
+		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusSolanaSubmitted)); err != nil {
+			return err
 		}
 		return s.publishBlockchainTransaction(tx)
 	case string(entities.StatusSolanaFailed):
-		if err := s.transactionRepo.UpdateTransactionStatus(ctx, tx.TransactionUUID.String(), string(entities.StatusSolanaFailed)); err != nil {
-			return fmt.Errorf(errUpdateTransactionStatusFmt, err)
+		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusSolanaFailed)); err != nil {
+			return err
 		}
 	case string(entities.StatusSolanaSuccess):
 		return s.publishBalanceTransaction(tx, string(entities.ActionDeposit))
 	case string(entities.StatusBalanceUpdated):
-		if err := s.transactionRepo.UpdateTransactionStatus(ctx, tx.TransactionUUID.String(), string(entities.StatusCompleted)); err != nil {
-			return fmt.Errorf(errUpdateTransactionStatusFmt, err)
+		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusCompleted)); err != nil {
+			return err
 		}
 	default:
 		return fmt.Errorf("unhandled transaction status: %s", event.Status)
@@ -208,18 +211,77 @@ func (s *transactionService) offchainWorkflow(ctx context.Context, tx *entities.
 	case string(entities.StatusBalanceUpdating):
 		return s.publishBalanceTransaction(tx, string(entities.ActionWithdraw))
 	case string(entities.StatusBalanceUpdated):
-		if err := s.transactionRepo.UpdateTransactionStatus(ctx, tx.TransactionUUID.String(), string(entities.StatusBalanceUpdated)); err != nil {
-			return fmt.Errorf(errUpdateTransactionStatusFmt, err)
+		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusBalanceUpdated)); err != nil {
+			return err
 		}
 		return s.publishPaymentTransaction(tx)
 	case string(entities.StatusPaymentSuccess):
-		if err := s.transactionRepo.UpdateTransactionStatus(ctx, tx.TransactionUUID.String(), string(entities.StatusCompleted)); err != nil {
-			return fmt.Errorf(errUpdateTransactionStatusFmt, err)
+		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusCompleted)); err != nil {
+			return err
 		}
 	default:
 		return fmt.Errorf("unhandled transaction status: %s", event.Status)
 	}
 
+	return nil
+}
+
+func (s *transactionService) onchainWorkflow(ctx context.Context, tx *entities.TransactionEntity, event request.TransactionMessage) error {
+	switch event.Status {
+	case string(entities.StatusSolanaSubmitted):
+		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusSolanaSubmitted)); err != nil {
+			return err
+		}
+		return s.publishBlockchainTransaction(tx)
+	case string(entities.StatusSolanaFailed):
+		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusFailed)); err != nil {
+			return err
+		}
+	case string(entities.StatusSolanaSuccess):
+		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusSolanaSuccess)); err != nil {
+			return err
+		}
+		return s.publishPaymentTransaction(tx)
+	case string(entities.StatusPaymentSuccess):
+		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusCompleted)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *transactionService) updateStatusAndNotify(ctx context.Context, txID string, status string) error {
+	if err := s.transactionRepo.UpdateTransactionStatus(ctx, txID, status); err != nil {
+		return fmt.Errorf(errUpdateTransactionStatusFmt, err)
+	}
+
+	if s.wsHub == nil {
+		return nil
+	}
+
+	if status != string(entities.StatusFailed) && status != string(entities.StatusCompleted) {
+		return nil
+	}
+
+	txUUID, err := uuid.Parse(txID)
+	if err != nil {
+		log.Printf("failed to parse tx id for websocket notify: %v", err)
+		return nil
+	}
+
+	tx, err := s.transactionRepo.GetTransactionByUUID(txUUID)
+	if err != nil {
+		log.Printf("failed to fetch transaction for websocket notify: %v", err)
+		return nil
+	}
+
+	jsonPayload, err := json.Marshal(tx)
+	if err != nil {
+		log.Printf("failed to marshal websocket transaction payload: %v", err)
+		return nil
+	}
+
+	s.wsHub.NotifyTransactionStatus(txID, jsonPayload)
 	return nil
 }
 
