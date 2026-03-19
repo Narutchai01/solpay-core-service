@@ -2,10 +2,8 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/Narutchai01/solpay-core-service/internal/config"
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
@@ -98,7 +96,7 @@ func (s *topUpService) ComfirmTopUp(ctx context.Context, req request.TopUpReques
 
 	tx = result.(*entities.TransactionEntity)
 
-	publishTransactionMessage(s.publisher, cfg.TRANSACTION_ORCHESTRATOR_QUEUE, tx)
+	s.publisher.PublishTransactionMessage(cfg.TRANSACTION_ORCHESTRATOR_QUEUE, tx, string(entities.StatusSolanaSubmitted))
 
 	return *tx, nil
 }
@@ -129,22 +127,4 @@ func validateQuote(quote *entities.Quote) error {
 		return entities.NewAppError(entities.ErrTypeBadRequest, "quote has expired", nil)
 	}
 	return nil
-}
-
-func publishTransactionMessage(publisher ports.Publisher, queue string, tx *entities.TransactionEntity) {
-	msg := request.TransactionMessage{
-		TxID:         tx.TransactionUUID.String(),
-		SourceWorker: "ORCHESTRATOR",
-		Status:       string(entities.StatusSolanaSubmitted),
-	}
-
-	jsonMessage, err := json.Marshal(msg)
-	if err != nil {
-		log.Printf("Failed to marshal balance result message: %v", err)
-		return
-	}
-
-	if err := publisher.Publish(queue, jsonMessage); err != nil {
-		log.Printf("Failed to publish balance result: %v", err)
-	}
 }

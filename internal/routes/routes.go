@@ -19,4 +19,5 @@ func RoutesConfig(app *fiber.App, db *gorm.DB, channel *amqp.Channel, cfg *confi
 	NewTransactionRouteConfig(v1.Group("/transactions"), db, channel).Setup()
 	NewQuoteRouteConfig(v1.Group("/quotes"), db).Setup()
 	NewTopUpRouteConfig(v1.Group("/topup"), db, channel).Setup()
+	NewOffChainRouteConfig(v1.Group("/offchain"), db, channel).Setup()
 }

@@ -52,6 +52,7 @@ const (
 	StatusCompleted          TransactionStatus = "COMPLETED"            // ทุกอย่างสมบูรณ์
 	StatusRefunded           TransactionStatus = "REFUNDED"             // เกิดข้อผิดพลาดและคืนเงินแล้ว
 	StatusPaymentSuccess     TransactionStatus = "PAYMENT_SUCCESS"
+	StatusFailed             TransactionStatus = "FAILED"
 	StatusPaymentFailed      TransactionStatus = "PAYMENT_FAILED"
 )
 
