@@ -63,7 +63,7 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-management-alpine
-    container_name: solpayg-rabbitmq
+    container_name: solpay-rabbitmq
     ports:
       - "5672:5672" # พอร์ตสำหรับเชื่อมต่อรับ-ส่งข้อมูล (AMQP)
       - "15672:15672" # พอร์ตสำหรับหน้า Dashboard (RabbitMQ Management)
