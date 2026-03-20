@@ -3,6 +3,7 @@ package handler
 import (
 	"github.com/Narutchai01/solpay-core-service/internal/core/services"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
+	"github.com/Narutchai01/solpay-core-service/internal/entities"
 	"github.com/Narutchai01/solpay-core-service/internal/utils"
 	"github.com/gofiber/fiber/v2"
 )
@@ -26,9 +27,7 @@ func NewQuoteHandler(quoteService services.QuoteService) QuoteHandler {
 func (h *quoteHandler) CreateQuoteHandler(c *fiber.Ctx) error {
 	var req request.CreateQuoteRequest
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
-		})
+		return utils.HandleResponse(c, nil, entities.NewAppError(entities.ErrTypeBadRequest, "invalid request body", err))
 	}
 
 	userID, ok := utils.GetUserIDFromLocals(c)
@@ -40,12 +39,10 @@ func (h *quoteHandler) CreateQuoteHandler(c *fiber.Ctx) error {
 
 	quoteResp, err := h.quoteService.CreateQuote(req, userID)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to create quote",
-		})
+		return utils.HandleResponse(c, nil, err)
 	}
 
-	return c.JSON(quoteResp)
+	return utils.HandleResponse(c, quoteResp, nil, "create quote successfully")
 }
 
 func (h *quoteHandler) GetQuoteByIDHandler(c *fiber.Ctx) error {

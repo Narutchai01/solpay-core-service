@@ -46,6 +46,12 @@ func NewQuoteService(quoteRepo ports.QuoteRepository, solanaRepo ports.SolanaCli
 
 func (s *quoteService) CreateQuote(req request.CreateQuoteRequest, userID int64) (response.QuoteResponse, error) {
 
+	if req.ActionType == string(entities.ONCHAIN) {
+		if req.PromptPayID == "" {
+			return response.QuoteResponse{}, entities.NewAppError(entities.ErrTypeBadRequest, "promptpay_id is required for onchain transactions", nil)
+		}
+	}
+
 	var quote entities.Quote
 
 	currentRate := 32.39
@@ -64,6 +70,7 @@ func (s *quoteService) CreateQuote(req request.CreateQuoteRequest, userID int64)
 		USDTAmount:   usdtAmount,
 		ExchangeRate: currentRate,
 		ExpiresAt:    expiresAt,
+		PromptPayID:  &req.PromptPayID,
 		Status:       string(entities.ACTIVE),
 		Fee:          fee,
 	}
