@@ -6,6 +6,7 @@ import "github.com/Narutchai01/solpay-core-service/internal/entities"
 type AccountDTO struct {
 	ID            uint   `json:"id"`
 	PublicAddress string `json:"public_address"`
+	IsKYCVerified bool   `json:"is_kyc_verified"`
 	CreatedAt     string `json:"created_at"`
 	UpdatedAt     string `json:"updated_at"`
 }
@@ -15,9 +16,18 @@ func FormatAccountDTO(account *entities.AccountEntity) *AccountDTO {
 	return &AccountDTO{
 		ID:            account.ID,
 		PublicAddress: account.PublicAddress,
+		IsKYCVerified: isKYCVerified(account),
 		CreatedAt:     account.CreatedAt.String(),
 		UpdatedAt:     account.UpdatedAt.String(),
 	}
+}
+
+func isKYCVerified(account *entities.AccountEntity) bool {
+	if account.KycToken == nil {
+		return false
+	}
+
+	return *account.KycToken != ""
 }
 
 // FormatAccountDTOs converts a slice of AccountEntity to a slice of AccountDTO.
