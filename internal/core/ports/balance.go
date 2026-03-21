@@ -12,4 +12,5 @@ type BalanceRepository interface {
 	CountBalances() (int64, error)
 	GetBalanceByID(id int) (*entities.BalanceEntity, error)
 	UpdateBalance(txCtx context.Context, data *entities.BalanceEntity) error
+	GetBalanceByAccountID(accountID uint) (*entities.BalanceEntity, error)
 }

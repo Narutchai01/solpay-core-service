@@ -21,6 +21,7 @@ type BalanceService interface {
 	UpdateBalance(data []byte) error
 	WithDraw(data []byte) error
 	Deposit(data []byte) error
+	GetByBalanceByAccountID(accountID uint) (*entities.BalanceEntity, error)
 }
 
 type balanceService struct {
@@ -175,4 +176,15 @@ func (s *balanceService) publishBalanceResult(cfg *config.Config, txID, status s
 	if err := s.publisher.Publish(cfg.TRANSACTION_ORCHESTRATOR_QUEUE, jsonMessage); err != nil {
 		log.Printf("Failed to publish balance result: %v", err)
 	}
+}
+
+func (s *balanceService) GetByBalanceByAccountID(accountID uint) (*entities.BalanceEntity, error) {
+	balance, err := s.balanceRepo.GetBalanceByAccountID(accountID)
+	if err != nil {
+		if errors.Is(err, entities.ErrNotFound) {
+			return nil, entities.NewAppError(entities.ErrTypeNotFound, fmt.Sprintf("balance for account %d not found", accountID), err)
+		}
+		return nil, entities.NewAppError(entities.ErrTypeInternal, "failed to get balance by account ID", err)
+	}
+	return balance, nil
 }
