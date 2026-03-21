@@ -16,6 +16,7 @@ import (
 type BalanceHandler interface {
 	GetBalancesHandler(c *fiber.Ctx) error
 	GetBalanceByIDHandler(c *fiber.Ctx) error
+	GetBalanceByAccountIDHandler(c *fiber.Ctx) error
 }
 
 type balanceHandler struct {
@@ -62,6 +63,23 @@ func (h *balanceHandler) GetBalanceByIDHandler(c *fiber.Ctx) error {
 	}
 
 	balance, err := h.balanceService.GetBalanceByID(id)
+	if err != nil {
+		return utils.HandleResponse(c, nil, err)
+	}
+
+	return utils.HandleResponse(c, response.FormatBalanceDTO(balance), nil)
+}
+
+func (h *balanceHandler) GetBalanceByAccountIDHandler(c *fiber.Ctx) error {
+
+	accountID, ok := utils.GetUserIDFromLocals(c)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid account context",
+		})
+	}
+
+	balance, err := h.balanceService.GetByBalanceByAccountID(uint(accountID))
 	if err != nil {
 		return utils.HandleResponse(c, nil, err)
 	}

@@ -4,6 +4,7 @@ import (
 	"github.com/Narutchai01/solpay-core-service/internal/core/services"
 	"github.com/Narutchai01/solpay-core-service/internal/handler"
 	"github.com/Narutchai01/solpay-core-service/internal/infra/repositories"
+	"github.com/Narutchai01/solpay-core-service/internal/middlewares"
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 )
@@ -29,5 +30,6 @@ func (brc *BalanceRouteConfig) Setup() {
 	balanceHandler := handler.NewBalanceHandler(balanceService)
 
 	brc.route.Get("/", balanceHandler.GetBalancesHandler)
+	brc.route.Get("/me", middlewares.AuthRequired(), balanceHandler.GetBalanceByAccountIDHandler)
 	brc.route.Get("/:id", balanceHandler.GetBalanceByIDHandler)
 }

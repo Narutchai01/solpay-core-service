@@ -59,3 +59,14 @@ func (r *balanceRepository) UpdateBalance(txCtx context.Context, data *entities.
 		Where("account_id = ?", data.AccountID).
 		Updates(data).Error
 }
+
+func (r *balanceRepository) GetBalanceByAccountID(accountID uint) (*entities.BalanceEntity, error) {
+	var balance entities.BalanceEntity
+	if err := r.db.Where("account_id = ?", accountID).First(&balance).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, entities.ErrNotFound
+		}
+		return nil, err
+	}
+	return &balance, nil
+}
