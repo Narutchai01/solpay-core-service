@@ -4,6 +4,7 @@ import (
 	"github.com/Narutchai01/solpay-core-service/internal/core/services"
 	"github.com/Narutchai01/solpay-core-service/internal/handler"
 	"github.com/Narutchai01/solpay-core-service/internal/infra/repositories"
+	"github.com/Narutchai01/solpay-core-service/internal/middlewares"
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 )
@@ -31,5 +32,7 @@ func (arc *AccountRouteConfig) Setup() {
 
 	arc.route.Post("/", accountHandler.CreateAccountHandler)
 	arc.route.Get("/", accountHandler.GetAccountsHandler)
+	arc.route.Get("/me", middlewares.AuthRequired(), accountHandler.GetAccountByProfileHandler)
 	arc.route.Get("/:id", accountHandler.GetAccountByIDHandler)
+
 }

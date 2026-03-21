@@ -17,6 +17,7 @@ type AccountHandler interface {
 	CreateAccountHandler(c *fiber.Ctx) error
 	GetAccountsHandler(c *fiber.Ctx) error
 	GetAccountByIDHandler(c *fiber.Ctx) error
+	GetAccountByProfileHandler(c *fiber.Ctx) error
 }
 
 type accountHandler struct {
@@ -91,6 +92,22 @@ func (h *accountHandler) GetAccountByIDHandler(c *fiber.Ctx) error {
 	}
 
 	account, err := h.accountService.GetAccountByID(id)
+	if err != nil {
+		return utils.HandleResponse(c, nil, err)
+	}
+
+	return utils.HandleResponse(c, response.FormatAccountDTO(account), nil)
+}
+
+func (h *accountHandler) GetAccountByProfileHandler(c *fiber.Ctx) error {
+	accountID, ok := utils.GetUserIDFromLocals(c)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid user context",
+		})
+	}
+
+	account, err := h.accountService.GetAccountByID(int(accountID))
 	if err != nil {
 		return utils.HandleResponse(c, nil, err)
 	}
