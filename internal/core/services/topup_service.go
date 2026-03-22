@@ -15,7 +15,7 @@ import (
 )
 
 type TopUpService interface {
-	ComfirmTopUp(ctx context.Context, req request.TopUpRequest) (entities.TransactionEntity, error)
+	ComfirmTopUp(ctx context.Context, req request.TopUpRequest, accountID uint) (entities.TransactionEntity, error)
 }
 
 type topUpService struct {
@@ -39,7 +39,7 @@ func NewTopUpService(
 	}
 }
 
-func (s *topUpService) ComfirmTopUp(ctx context.Context, req request.TopUpRequest) (entities.TransactionEntity, error) {
+func (s *topUpService) ComfirmTopUp(ctx context.Context, req request.TopUpRequest, accountID uint) (entities.TransactionEntity, error) {
 	cfg := config.LoadConfig()
 
 	if err := validateTopUpRequest(req); err != nil {
@@ -67,7 +67,7 @@ func (s *topUpService) ComfirmTopUp(ctx context.Context, req request.TopUpReques
 
 	tx := &entities.TransactionEntity{
 		TransactionUUID: txUUID,
-		AccountID:       1,
+		AccountID:       accountID,
 		TransactionType: string(entities.TOPUP),
 		THBAmount:       float64(quote.THBAmount),
 		USDTAmount:      quote.USDTAmount,

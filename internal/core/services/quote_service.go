@@ -25,9 +25,9 @@ func isInvalidSolanaAddressError(err error) bool {
 }
 
 type QuoteService interface {
-	CreateQuote(reqQuote request.CreateQuoteRequest, userID int64) (response.QuoteResponse, error)
+	CreateQuote(reqQuote request.CreateQuoteRequest, accountID uint) (response.QuoteResponse, error)
 	GetQuoteByID(id string) (*entities.Quote, error)
-	ConFirmQuote(id string, accountID int64) (string, error)
+	ConFirmQuote(id string, accountID uint) (string, error)
 }
 
 type quoteService struct {
@@ -44,7 +44,7 @@ func NewQuoteService(quoteRepo ports.QuoteRepository, solanaRepo ports.SolanaCli
 	}
 }
 
-func (s *quoteService) CreateQuote(req request.CreateQuoteRequest, userID int64) (response.QuoteResponse, error) {
+func (s *quoteService) CreateQuote(req request.CreateQuoteRequest, accountID uint) (response.QuoteResponse, error) {
 
 	if req.ActionType == string(entities.ONCHAIN) {
 		if req.PromptPayID == "" {
@@ -64,7 +64,7 @@ func (s *quoteService) CreateQuote(req request.CreateQuoteRequest, userID int64)
 	expiresAt := time.Now().Add(60 * time.Second)
 
 	quote = entities.Quote{
-		AccountID:    userID, // สมมติว่าไม่มีการเชื่อมโยงกับบัญชีในตอนนี้
+		AccountID:    accountID, // สมมติว่าไม่มีการเชื่อมโยงกับบัญชีในตอนนี้
 		Type:         req.ActionType,
 		THBAmount:    thbSatang,
 		USDTAmount:   usdtAmount,
@@ -99,7 +99,7 @@ func (s *quoteService) GetQuoteByID(id string) (*entities.Quote, error) {
 	return quote, nil
 }
 
-func (s *quoteService) ConFirmQuote(id string, accountID int64) (string, error) {
+func (s *quoteService) ConFirmQuote(id string, accountID uint) (string, error) {
 	if s.solanaRepo == nil {
 		return "", entities.NewAppError(entities.ErrTypeInternal, "solana client is not configured", nil)
 	}
@@ -118,7 +118,7 @@ func (s *quoteService) ConFirmQuote(id string, accountID int64) (string, error) 
 		return "", err
 	}
 
-	if quote.AccountID != int64(account.ID) {
+	if quote.AccountID != account.ID {
 		return "", entities.NewAppError(entities.ErrTypeConflict, "quote does not belong to the account", nil)
 	}
 

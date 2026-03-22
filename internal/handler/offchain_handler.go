@@ -27,7 +27,12 @@ func (h *offChainHandler) ConfirmOffChainHandler(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "invalid request body")
 	}
 
-	tx, err := h.offchainService.ComFirmOffchain(c.Context(), req)
+	accountID, ok := utils.GetUserIDFromLocals(c)
+	if !ok {
+		return utils.HandleResponse(c, nil, fiber.NewError(fiber.StatusUnauthorized, "unauthorized"))
+	}
+
+	tx, err := h.offchainService.ComFirmOffchain(c.Context(), req, accountID)
 
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "failed to confirm off-chain transaction")

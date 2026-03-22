@@ -12,7 +12,7 @@ import (
 )
 
 type OffChainService interface {
-	ComFirmOffchain(ctx context.Context, req request.OffChainRequest) (entities.TransactionEntity, error)
+	ComFirmOffchain(ctx context.Context, req request.OffChainRequest, accountID uint) (entities.TransactionEntity, error)
 }
 
 type offChainService struct {
@@ -29,7 +29,7 @@ func NewOffChainService(transactionRepo ports.TransactionRepository, uow ports.U
 	}
 }
 
-func (s *offChainService) ComFirmOffchain(ctx context.Context, req request.OffChainRequest) (entities.TransactionEntity, error) {
+func (s *offChainService) ComFirmOffchain(ctx context.Context, req request.OffChainRequest, accountID uint) (entities.TransactionEntity, error) {
 
 	cfg := config.LoadConfig()
 
@@ -40,7 +40,7 @@ func (s *offChainService) ComFirmOffchain(ctx context.Context, req request.OffCh
 
 	tx := &entities.TransactionEntity{
 		TransactionUUID: txUUID,
-		AccountID:       1,
+		AccountID:       accountID,
 		TransactionType: string(entities.OFFCHAIN),
 		THBAmount:       float64(req.THBAmount),
 		USDTAmount:      0,

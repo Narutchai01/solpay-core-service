@@ -13,7 +13,7 @@ import (
 )
 
 type OnchainService interface {
-	ComfirmOnchain(ctx context.Context, req request.TopUpRequest) (entities.TransactionEntity, error)
+	ComfirmOnchain(ctx context.Context, req request.TopUpRequest, accountID uint) (entities.TransactionEntity, error)
 }
 
 type OnchainServiceService struct {
@@ -37,7 +37,7 @@ func NewOnchainService(
 	}
 }
 
-func (s *OnchainServiceService) ComfirmOnchain(ctx context.Context, req request.TopUpRequest) (entities.TransactionEntity, error) {
+func (s *OnchainServiceService) ComfirmOnchain(ctx context.Context, req request.TopUpRequest, accountID uint) (entities.TransactionEntity, error) {
 	cfg := config.LoadConfig()
 
 	if err := validateTopUpRequest(req); err != nil {
@@ -65,7 +65,7 @@ func (s *OnchainServiceService) ComfirmOnchain(ctx context.Context, req request.
 
 	tx := &entities.TransactionEntity{
 		TransactionUUID: txUUID,
-		AccountID:       1,
+		AccountID:       accountID,
 		TransactionType: quote.Type,
 		THBAmount:       float64(quote.THBAmount),
 		USDTAmount:      quote.USDTAmount,
