@@ -29,7 +29,12 @@ func (h *topUpHandler) ConfirmTopUpHandler(c *fiber.Ctx) error {
 		})
 	}
 
-	tx, err := h.topUpService.ComfirmTopUp(c.Context(), req)
+	accountID, ok := utils.GetUserIDFromLocals(c)
+	if !ok {
+		return utils.HandleResponse(c, nil, fiber.NewError(fiber.StatusUnauthorized, "unauthorized"))
+	}
+
+	tx, err := h.topUpService.ComfirmTopUp(c.Context(), req, accountID)
 	if err != nil {
 		return utils.HandleResponse(c, nil, err)
 	}
