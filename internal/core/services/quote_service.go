@@ -26,7 +26,7 @@ func isInvalidSolanaAddressError(err error) bool {
 
 type QuoteService interface {
 	CreateQuote(reqQuote request.CreateQuoteRequest, accountID uint) (response.QuoteResponse, error)
-	GetQuoteByID(id string) (*entities.Quote, error)
+	GetQuoteByID(id string) (response.QuoteResponse, error)
 	ConFirmQuote(id string, accountID uint) (string, error)
 }
 
@@ -91,12 +91,19 @@ func (s *quoteService) CreateQuote(req request.CreateQuoteRequest, accountID uin
 	return quoteResp, nil
 }
 
-func (s *quoteService) GetQuoteByID(id string) (*entities.Quote, error) {
+func (s *quoteService) GetQuoteByID(id string) (response.QuoteResponse, error) {
 	quote, err := s.quoteRepo.GetQuoteByID(id)
 	if err != nil {
-		return nil, err
+		return response.QuoteResponse{}, err
 	}
-	return quote, nil
+	quoteResp := response.QuoteResponse{
+		QuoteID:      quote.ID,
+		THBAmount:    float64(quote.THBAmount) / 100, // แปลงกลับเป็นบาท
+		USDTAmount:   quote.USDTAmount,
+		ExchangeRate: quote.ExchangeRate,
+		Fee:          quote.Fee,
+	}
+	return quoteResp, nil
 }
 
 func (s *quoteService) ConFirmQuote(id string, accountID uint) (string, error) {
