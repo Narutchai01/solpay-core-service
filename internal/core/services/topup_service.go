@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/Narutchai01/solpay-core-service/internal/config"
@@ -11,7 +10,6 @@ import (
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
 	"github.com/Narutchai01/solpay-core-service/internal/utils"
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type TopUpService interface {
@@ -99,32 +97,4 @@ func (s *topUpService) ComfirmTopUp(ctx context.Context, req request.TopUpReques
 	s.publisher.PublishTransactionMessage(cfg.TRANSACTION_ORCHESTRATOR_QUEUE, tx, string(entities.StatusSolanaSubmitted))
 
 	return *tx, nil
-}
-
-// Helper functions
-
-func validateTopUpRequest(req request.TopUpRequest) error {
-	if req.QuoteID == "" || req.TxHash == "" {
-		return entities.NewAppError(entities.ErrTypeBadRequest, "quote_id and tx_hash are required", nil)
-	}
-	return nil
-}
-
-func fetchQuote(repo ports.QuoteRepository, quoteID string) (*entities.Quote, error) {
-	quote, err := repo.GetQuoteByID(quoteID)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) || errors.Is(err, entities.ErrNotFound) {
-			return nil, entities.NewAppError(entities.ErrTypeNotFound, fmt.Sprintf("quote %s not found", quoteID), err)
-		}
-		return nil, entities.NewAppError(entities.ErrTypeInternal, "failed to fetch quote", err)
-	}
-	return quote, nil
-}
-
-func validateQuote(quote *entities.Quote) error {
-
-	if quote.Status != string(entities.USED) {
-		return entities.NewAppError(entities.ErrTypeBadRequest, "quote has expired", nil)
-	}
-	return nil
 }

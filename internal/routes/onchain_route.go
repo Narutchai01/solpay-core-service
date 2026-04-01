@@ -5,6 +5,7 @@ import (
 	"github.com/Narutchai01/solpay-core-service/internal/handler"
 	"github.com/Narutchai01/solpay-core-service/internal/infra/rabbitmq"
 	"github.com/Narutchai01/solpay-core-service/internal/infra/repositories"
+	"github.com/Narutchai01/solpay-core-service/internal/middlewares"
 	"github.com/gofiber/fiber/v2"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"gorm.io/gorm"
@@ -36,5 +37,5 @@ func (trc *OnchainRouteConfig) Setup() {
 	onchainHandler := handler.NewOnchainHandler(onchainService)
 
 	// กำหนดเส้นทางสำหรับ On-Chain
-	trc.route.Post("/confirm", onchainHandler.ConfirmOnchainHandler)
+	trc.route.Post("/confirm", middlewares.AuthRequired(), onchainHandler.ConfirmOnchainHandler)
 }
