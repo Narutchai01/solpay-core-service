@@ -3,6 +3,8 @@ package services
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/Narutchai01/solpay-core-service/internal/config"
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
@@ -19,19 +21,34 @@ type offChainService struct {
 	transactionRepo ports.TransactionRepository
 	uow             ports.UnitOfWork
 	publisher       ports.Publisher
+	quoteRepo       ports.QuoteRepository
 }
 
-func NewOffChainService(transactionRepo ports.TransactionRepository, uow ports.UnitOfWork, publisher ports.Publisher) OffChainService {
+func NewOffChainService(transactionRepo ports.TransactionRepository, uow ports.UnitOfWork, publisher ports.Publisher, quoteRepo ports.QuoteRepository) OffChainService {
 	return &offChainService{
 		transactionRepo: transactionRepo,
 		uow:             uow,
 		publisher:       publisher,
+		quoteRepo:       quoteRepo,
 	}
 }
 
 func (s *offChainService) ComFirmOffchain(ctx context.Context, req request.OffChainRequest, accountID uint) (entities.TransactionEntity, error) {
 
 	cfg := config.LoadConfig()
+	quoteID := strings.TrimSpace(req.QuoteID)
+	if quoteID == "" {
+		return entities.TransactionEntity{}, entities.NewAppError(entities.ErrTypeBadRequest, "quote_id is required", nil)
+	}
+
+	quote, err := fetchQuote(s.quoteRepo, quoteID)
+	if err != nil {
+		return entities.TransactionEntity{}, err
+	}
+
+	if err := validateOffchainQuote(quote, accountID); err != nil {
+		return entities.TransactionEntity{}, err
+	}
 
 	txUUID, err := uuid.NewV7()
 	if err != nil {
@@ -42,7 +59,7 @@ func (s *offChainService) ComFirmOffchain(ctx context.Context, req request.OffCh
 		TransactionUUID: txUUID,
 		AccountID:       accountID,
 		TransactionType: string(entities.OFFCHAIN),
-		THBAmount:       float64(req.THBAmount),
+		THBAmount:       float64(quote.THBAmount),
 		USDTAmount:      0,
 		Fee:             0,
 	}
@@ -52,9 +69,13 @@ func (s *offChainService) ComFirmOffchain(ctx context.Context, req request.OffCh
 			return nil, err
 		}
 
+		if quote.PromptPayID == nil || *quote.PromptPayID == "" {
+			return nil, entities.NewAppError(entities.ErrTypeBadRequest, "promptpay_id is required for offchain confirm", nil)
+		}
+
 		txOffChain := &entities.TransactionOffChain{
 			TransactionID: tx.TransactionUUID,
-			PromptPayID:   req.PromptPayID,
+			PromptPayID:   *quote.PromptPayID,
 		}
 
 		if err := s.transactionRepo.CreateTransactionOffChain(txCtx, txOffChain); err != nil {
@@ -72,4 +93,20 @@ func (s *offChainService) ComFirmOffchain(ctx context.Context, req request.OffCh
 	s.publisher.PublishTransactionMessage(cfg.TRANSACTION_ORCHESTRATOR_QUEUE, tx, string(entities.StatusBalanceWithdrawing))
 
 	return *tx, nil
+}
+
+func validateOffchainQuote(quote *entities.Quote, accountID uint) error {
+	if quote.ExpiresAt.Before(time.Now()) {
+		return entities.NewAppError(entities.ErrTypeBadRequest, "quote has expired", nil)
+	}
+
+	if quote.AccountID != accountID {
+		return entities.NewAppError(entities.ErrTypeConflict, "quote does not belong to the account", nil)
+	}
+
+	if quote.Status != string(entities.ACTIVE) {
+		return entities.NewAppError(entities.ErrTypeBadRequest, "quote is not active", nil)
+	}
+
+	return nil
 }

@@ -3,6 +3,7 @@ package handler
 import (
 	"github.com/Narutchai01/solpay-core-service/internal/core/services"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
+	"github.com/Narutchai01/solpay-core-service/internal/entities"
 	"github.com/Narutchai01/solpay-core-service/internal/utils"
 	"github.com/gofiber/fiber/v2"
 )
@@ -24,18 +25,20 @@ func NewOffChainHandler(offchainService services.OffChainService) OffChainHandle
 func (h *offChainHandler) ConfirmOffChainHandler(c *fiber.Ctx) error {
 	var req request.OffChainRequest
 	if err := c.BodyParser(&req); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, "invalid request body")
+		return utils.HandleResponse(c, nil, entities.NewAppError(entities.ErrTypeBadRequest, "invalid request body", err))
 	}
 
 	accountID, ok := utils.GetUserIDFromLocals(c)
 	if !ok {
-		return utils.HandleResponse(c, nil, fiber.NewError(fiber.StatusUnauthorized, "unauthorized"))
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "unauthorized",
+		})
 	}
 
 	tx, err := h.offchainService.ComFirmOffchain(c.Context(), req, accountID)
 
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, "failed to confirm off-chain transaction")
+		return utils.HandleResponse(c, nil, err)
 	}
 
 	return utils.HandleResponse(c, tx, nil)
