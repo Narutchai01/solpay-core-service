@@ -6,6 +6,7 @@ import (
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type AdminService interface {
@@ -25,18 +26,18 @@ func NewAdminService(adminRepo ports.AdminRepository, uow ports.UnitOfWork) Admi
 }
 
 func (s *adminService) CreateAdmin(ctx context.Context, req request.CreateAdminRequest) (*entities.AdminEntity, error) {
-	result, err := s.uow.Execute(ctx, func(txCtx context.Context) (any, error) {
-		admin := &entities.AdminEntity{
-			Username: req.Username,
-			Password: req.Password,
-		}
-		if err := s.adminRepo.CreateAdmin(txCtx, admin); err != nil {
-			return nil, err
-		}
-		return admin, nil
-	})
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+
 	if err != nil {
-		return nil, entities.NewAppError(entities.ErrTypeInternal, "failed to create admin", err)
+		return nil, entities.NewAppError(entities.ErrTypeInternal, "failed to hash password", err)
 	}
-	return result.(*entities.AdminEntity), nil
+	admin := &entities.AdminEntity{
+		Username: req.Username,
+		Password: string(hashedPassword),
+	}
+
+	if err := s.adminRepo.CreateAdmin(ctx, admin); err != nil {
+		return nil, err
+	}
+	return admin, nil
 }
