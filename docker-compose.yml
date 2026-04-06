@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   database:
-    container_name: solpayg-postgres
+    container_name: solpay-postgres
     image: postgres:18
     environment:
       POSTGRES_USER: ${DB_USER}
@@ -33,13 +33,13 @@ services:
       database:
         condition: service_healthy
     environment:
-      DB_HOST: database
+      DB_HOST: solpay-postgres
       DB_PORT: 5432
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: ${DB_NAME}
       APP_PORT: ${APP_PORT}
-      MQ_HOST: solpayg-rabbitmq
+      MQ_HOST: solpay-rabbitmq
       MQ_PORT: ${MQ_PORT}
       MQ_USER: ${MQ_USER}
       MQ_PASSWORD: ${MQ_PASSWORD}
