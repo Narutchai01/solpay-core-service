@@ -7,5 +7,5 @@ import (
 )
 
 type AdminRepository interface {
-	CreateAdmin(txCtx context.Context, data *entities.AdminEntity) error
+	CreateAdmin(transaction context.Context, data *entities.AdminEntity) error
 }

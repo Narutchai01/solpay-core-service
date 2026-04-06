@@ -15,13 +15,11 @@ type AdminService interface {
 
 type adminService struct {
 	adminRepo ports.AdminRepository
-	uow       ports.UnitOfWork
 }
 
-func NewAdminService(adminRepo ports.AdminRepository, uow ports.UnitOfWork) AdminService {
+func NewAdminService(adminRepo ports.AdminRepository) AdminService {
 	return &adminService{
 		adminRepo: adminRepo,
-		uow:       uow,
 	}
 }
 

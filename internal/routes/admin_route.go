@@ -22,8 +22,7 @@ func NewAdminRouteConfig(route fiber.Router, db *gorm.DB) *AdminRouteConfig {
 
 func (arc *AdminRouteConfig) Setup() {
 	adminRepo := repositories.NewGormAdminRepository(arc.db)
-	uow := repositories.NewSqlUnitOfWork(arc.db)
-	adminService := services.NewAdminService(adminRepo, uow)
+	adminService := services.NewAdminService(adminRepo)
 	adminHandler := handler.NewAdminHandler(adminService)
 
 	arc.route.Post("/", adminHandler.CreateAdminHandler)
