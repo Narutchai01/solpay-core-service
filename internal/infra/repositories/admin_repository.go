@@ -28,3 +28,30 @@ func (r *gormAdminRepository) CreateAdmin(txCtx context.Context, data *entities.
 	}
 	return nil
 }
+
+func (r *gormAdminRepository) GetAdminByUsername(ctx context.Context, username string) (*entities.AdminEntity, error) {
+	var admin entities.AdminEntity
+
+	err := r.db.WithContext(ctx).
+		Where("username = ?", username).
+		First(&admin).Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &admin, err
+}
+
+func (r *gormAdminRepository) GetAdminByID(ctx context.Context, id string) (*entities.AdminEntity, error) {
+	var admin entities.AdminEntity
+
+	err := r.db.WithContext(ctx).
+		Where("id = ?", id).
+		First(&admin).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &admin, nil
+}
