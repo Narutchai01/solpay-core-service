@@ -45,11 +45,12 @@ func (r *gormAdminRepository) GetAdminByUsername(ctx context.Context, username s
 func (r *gormAdminRepository) GetAdminByID(ctx context.Context, id string) (*entities.AdminEntity, error) {
 	var admin entities.AdminEntity
 
-	err := r.db.WithContext(ctx).
-		Where("id = ?", id).
-		First(&admin).Error
+	err := r.db.WithContext(ctx).First(&admin, id).Error
 
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
 		return nil, err
 	}
 
