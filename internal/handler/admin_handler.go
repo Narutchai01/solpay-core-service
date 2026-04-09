@@ -61,7 +61,7 @@ func (h *adminHandler) LoginAdminHandler(c *fiber.Ctx) error {
 		return utils.HandleResponse(c, nil, entities.NewAppError(entities.ErrTypeBadRequest, msg, err))
 	}
 
-	_, token, err := h.adminService.LoginAdmin(c.UserContext(), req)
+	_, token, err := h.adminService.LoginAdmin(req)
 	if err != nil {
 		return utils.HandleResponse(c, nil, err)
 	}
@@ -73,12 +73,13 @@ func (h *adminHandler) LoginAdminHandler(c *fiber.Ctx) error {
 }
 
 func (h *adminHandler) GetProfileHandler(c *fiber.Ctx) error {
-	userID, ok := c.Locals("user_id").(string)
+	idValue := c.Locals("userID")
+	userIDInt64, ok := idValue.(int64)
 	if !ok {
 		return fiber.ErrUnauthorized
 	}
 
-	admin, err := h.adminService.GetProfile(c.UserContext(), userID)
+	admin, err := h.adminService.GetProfile(uint(userIDInt64))
 	if err != nil {
 		return utils.HandleResponse(c, nil, err)
 	}

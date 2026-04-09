@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/Narutchai01/solpay-core-service/internal/config"
@@ -14,8 +15,8 @@ import (
 
 type AdminService interface {
 	CreateAdmin(ctx context.Context, req request.CreateAdminRequest) (*entities.AdminEntity, error)
-	LoginAdmin(ctx context.Context, req request.CreateAdminRequest) (*entities.AdminEntity, string, error)
-	GetProfile(ctx context.Context, userID string) (*entities.AdminEntity, error)
+	LoginAdmin(req request.CreateAdminRequest) (*entities.AdminEntity, string, error)
+	GetProfile(userID uint) (*entities.AdminEntity, error)
 }
 
 type adminService struct {
@@ -62,37 +63,28 @@ func (s *adminService) CreateAdmin(ctx context.Context, req request.CreateAdminR
 	return admin, nil
 }
 
-func (s *adminService) LoginAdmin(ctx context.Context, req request.CreateAdminRequest) (*entities.AdminEntity, string, error) {
+func (s *adminService) LoginAdmin(req request.CreateAdminRequest) (*entities.AdminEntity, string, error) {
 	req.Username = strings.ToLower(strings.TrimSpace(req.Username))
 
-	admin, err := s.adminRepo.GetAdminByUsername(ctx, req.Username)
+	admin, err := s.adminRepo.GetAdminByUsername(context.Background(), req.Username)
 	if err != nil {
 		return nil, "", err
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(req.Password))
-	if err != nil {
-		return nil, "", entities.NewAppError(
-			entities.ErrTypeBadRequest,
-			"invalid username or password",
-			nil,
-		)
+	if err := bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(req.Password)); err != nil {
+		return nil, "", entities.NewAppError(entities.ErrTypeBadRequest, "invalid username or password", nil)
 	}
 
-	token, err := utils.GenerateJWT(admin.ID.String(), admin.Username, s.cfg.SECRET_JWT)
-	if err != nil {
-		return nil, "", entities.NewAppError(
-			entities.ErrTypeInternal,
-			"failed to generate token",
-			err,
-		)
+	token := utils.GenerateAccessToken(admin.ID)
+	if token == "" {
+		return nil, "", entities.NewAppError(entities.ErrTypeInternal, "failed to generate token", nil)
 	}
 
 	return admin, token, nil
 }
 
-func (s *adminService) GetProfile(ctx context.Context, userID string) (*entities.AdminEntity, error) {
-	admin, err := s.adminRepo.GetAdminByID(ctx, userID)
+func (s *adminService) GetProfile(userID uint) (*entities.AdminEntity, error) {
+	admin, err := s.adminRepo.GetAdminByID(context.Background(), fmt.Sprintf("%d", userID))
 	if err != nil {
 		return nil, err
 	}

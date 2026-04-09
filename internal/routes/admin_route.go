@@ -31,5 +31,5 @@ func (arc *AdminRouteConfig) Setup() {
 
 	arc.route.Post("/", adminHandler.CreateAdminHandler)
 	arc.route.Post("/login", adminHandler.LoginAdminHandler)
-	arc.route.Get("/me", middlewares.JWTMiddleware(cfg), adminHandler.GetProfileHandler)
+	arc.route.Get("/me", middlewares.AuthRequired(), adminHandler.GetProfileHandler)
 }
