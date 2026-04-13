@@ -5,6 +5,7 @@ import (
 	"github.com/Narutchai01/solpay-core-service/internal/handler"
 	"github.com/Narutchai01/solpay-core-service/internal/infra/rabbitmq"
 	"github.com/Narutchai01/solpay-core-service/internal/infra/repositories"
+	"github.com/Narutchai01/solpay-core-service/internal/middlewares"
 	"github.com/gofiber/fiber/v2"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"gorm.io/gorm"
@@ -36,5 +37,5 @@ func (trc *TopUpRouteConfig) Setup() {
 	topUpHandler := handler.NewTopUpHandler(topUpService)
 
 	// กำหนดเส้นทางสำหรับ Top-Up
-	trc.route.Post("/confirm", topUpHandler.ConfirmTopUpHandler)
+	trc.route.Post("/confirm", middlewares.AuthRequired(), topUpHandler.ConfirmTopUpHandler)
 }
