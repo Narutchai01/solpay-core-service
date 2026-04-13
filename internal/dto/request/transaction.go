@@ -20,6 +20,6 @@ type TransactionMessage struct {
 }
 
 type QueryTransactionSummaryRequest struct {
-	StartDate string `json:"start_date"`
-	EndDate   string `json:"end_date"`
+	Month string `json:"month"`
+	Year  string `json:"year"`
 }

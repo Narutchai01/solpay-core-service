@@ -2,7 +2,6 @@ package handler
 
 import (
 	"strconv"
-	"time"
 
 	"github.com/Narutchai01/solpay-core-service/internal/core/services"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
@@ -61,17 +60,18 @@ func (h *transactionHandler) GetTransactionByIDHandler(c *fiber.Ctx) error {
 }
 
 func (h *transactionHandler) QueryTransactionSummaryHandler(c *fiber.Ctx) error {
-	now := time.Now()
+	query := new(request.QueryTransactionSummaryRequest)
 
-	monthStr := c.Query("month", strconv.Itoa(int(now.Month())))
-	yearStr := c.Query("year", strconv.Itoa(now.Year()))
+	if err := c.QueryParser(query); err != nil {
+		return utils.HandleResponse(c, nil, entities.NewAppError(entities.ErrTypeBadRequest, "invalid query parameters", err))
+	}
 
-	month, err := strconv.Atoi(monthStr)
+	month, err := strconv.Atoi(query.Month)
 	if err != nil || month < 1 || month > 12 {
 		return utils.HandleResponse(c, nil, entities.NewAppError(entities.ErrTypeBadRequest, "month must be between 1 and 12", nil))
 	}
 
-	year, err := strconv.Atoi(yearStr)
+	year, err := strconv.Atoi(query.Year)
 	if err != nil || year < 2000 {
 		return utils.HandleResponse(c, nil, entities.NewAppError(entities.ErrTypeBadRequest, "invalid year", nil))
 	}
