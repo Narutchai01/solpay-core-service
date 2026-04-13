@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/Narutchai01/solpay-core-service/internal/config"
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
@@ -18,10 +19,26 @@ import (
 const errPublisherNotConfigured = "publisher is not configured"
 const errUpdateTransactionStatusFmt = "update transaction status: %w"
 
+// TransactionChartData holds deposit and withdraw totals for a single day.
+type TransactionChartData struct {
+	Date     string  `json:"date"`
+	Label    string  `json:"label"`
+	Deposit  float64 `json:"deposit"`
+	Withdraw float64 `json:"withdraw"`
+}
+
+// TransactionChartSummary is the top-level response for the chart endpoint.
+type TransactionChartSummary struct {
+	TotalDeposit  float64                `json:"totalDeposit"`
+	TotalWithdraw float64                `json:"totalWithdraw"`
+	ChartData     []TransactionChartData `json:"chartData"`
+}
+
 // TransactionService defines operations for managing transactions.
 type TransactionService interface {
 	CreateTransaction(ctx context.Context, req request.CreateTransactionRequest) (*entities.TransactionEntity, error)
 	GetTransactionByID(id int) (*entities.TransactionEntity, error)
+	QueryTransactionSummary(ctx context.Context, month, year int) (*TransactionChartSummary, error)
 	HandleTransactionUpdate(ctx context.Context, msg []byte) error
 }
 
@@ -366,4 +383,48 @@ func (s *transactionService) publishPaymentTransaction(tx *entities.TransactionE
 	}
 
 	return nil
+}
+
+func (s *transactionService) QueryTransactionSummary(ctx context.Context, month, year int) (*TransactionChartSummary, error) {
+	rows, err := s.transactionRepo.QueryTransactionSummary(ctx, month, year)
+	if err != nil {
+		return nil, entities.NewAppError(entities.ErrTypeInternal, "failed to query transaction summary", err)
+	}
+
+	// Index raw rows by date+type for O(1) lookup
+	type key struct{ date, txType string }
+	indexed := make(map[key]float64, len(rows))
+	for _, r := range rows {
+		indexed[key{r.Date, r.TransactionType}] = r.TotalAmount
+	}
+
+	// Build a full calendar for the requested month (all days, no gaps)
+	daysInMonth := time.Date(year, time.Month(month)+1, 0, 0, 0, 0, 0, time.UTC).Day()
+
+	chartData := make([]TransactionChartData, 0, daysInMonth)
+	var totalDeposit, totalWithdraw float64
+
+	for day := 1; day <= daysInMonth; day++ {
+		date := fmt.Sprintf("%04d-%02d-%02d", year, month, day)
+		label := fmt.Sprintf("%02d", day)
+
+		deposit := indexed[key{date, string(entities.TOPUP)}]
+		withdraw := indexed[key{date, string(entities.OFFCHAIN)}]
+
+		totalDeposit += deposit
+		totalWithdraw += withdraw
+
+		chartData = append(chartData, TransactionChartData{
+			Date:     date,
+			Label:    label,
+			Deposit:  deposit,
+			Withdraw: withdraw,
+		})
+	}
+
+	return &TransactionChartSummary{
+		TotalDeposit:  totalDeposit,
+		TotalWithdraw: totalWithdraw,
+		ChartData:     chartData,
+	}, nil
 }
