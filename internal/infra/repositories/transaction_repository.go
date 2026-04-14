@@ -83,33 +83,23 @@ func (r *transactionRepository) GetTransactionByUUID(txUUID uuid.UUID) (*entitie
 
 func (r *transactionRepository) CountTransactions(accountID uint, q request.TransactionQuery) (int64, error) {
 	var total int64
-	db := r.db.Model(&entities.TransactionEntity{})
 
-	if accountID > 0 {
-		db = db.Where("account_id = ?", accountID)
-	}
-	if q.TxType != "" {
-		db = db.Where("transaction_type = ?", q.TxType)
-	}
+	err := r.db.Model(&entities.TransactionEntity{}).
+		Where(&entities.TransactionEntity{
+			AccountID:       accountID,
+			TransactionType: q.TxType,
+		}).
+		Count(&total).Error
 
-	if err := db.Count(&total).Error; err != nil {
-		return 0, err
-	}
-	return total, nil
+	return total, err
 }
 
 func (r *transactionRepository) GetTransactions(accountID uint, q request.TransactionQuery) ([]entities.TransactionEntity, error) {
 	var transactions []entities.TransactionEntity
-	db := r.db.Model(&entities.TransactionEntity{})
 
-	if accountID > 0 {
-		db = db.Where("account_id = ?", accountID)
-	}
-	if q.TxType != "" {
-		db = db.Where("transaction_type = ?", q.TxType)
-	}
-
-	err := db.Order("created_at DESC").
+	err := r.db.Model(&entities.TransactionEntity{}).
+		Where("account_id = ? AND transaction_type = ?", accountID, q.TxType).
+		Order("created_at DESC").
 		Limit(q.GetLimit()).
 		Offset(q.GetOffset()).
 		Preload("TransactionOnChain").
