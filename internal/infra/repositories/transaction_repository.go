@@ -81,22 +81,32 @@ func (r *transactionRepository) GetTransactionByUUID(txUUID uuid.UUID) (*entitie
 	return &transaction, nil
 }
 
-func (r *transactionRepository) GetTransactions(accountID uint, q request.TransactionQuery) ([]entities.TransactionEntity, int64, error) {
-	var transactions []entities.TransactionEntity
+func (r *transactionRepository) CountTransactions(accountID uint, q request.TransactionQuery) (int64, error) {
 	var total int64
-
 	db := r.db.Model(&entities.TransactionEntity{})
 
 	if accountID > 0 {
 		db = db.Where("account_id = ?", accountID)
 	}
-
 	if q.TxType != "" {
 		db = db.Where("transaction_type = ?", q.TxType)
 	}
 
 	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, err
+		return 0, err
+	}
+	return total, nil
+}
+
+func (r *transactionRepository) GetTransactions(accountID uint, q request.TransactionQuery) ([]entities.TransactionEntity, error) {
+	var transactions []entities.TransactionEntity
+	db := r.db.Model(&entities.TransactionEntity{})
+
+	if accountID > 0 {
+		db = db.Where("account_id = ?", accountID)
+	}
+	if q.TxType != "" {
+		db = db.Where("transaction_type = ?", q.TxType)
 	}
 
 	err := db.Order("created_at DESC").
@@ -106,7 +116,7 @@ func (r *transactionRepository) GetTransactions(accountID uint, q request.Transa
 		Preload("TransactionOffChain").
 		Find(&transactions).Error
 
-	return transactions, total, err
+	return transactions, err
 }
 
 func (r *transactionRepository) QueryTransactionSummary(txCtx context.Context, month, year int) ([]entities.TransactionSummary, error) {

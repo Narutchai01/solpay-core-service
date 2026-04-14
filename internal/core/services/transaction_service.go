@@ -387,7 +387,21 @@ func (s *transactionService) publishPaymentTransaction(tx *entities.TransactionE
 }
 
 func (s *transactionService) GetTransactions(accountID uint, q request.TransactionQuery) ([]entities.TransactionEntity, int64, error) {
-	return s.transactionRepo.GetTransactions(accountID, q)
+	total, err := s.transactionRepo.CountTransactions(accountID, q)
+	if err != nil {
+		return nil, 0, entities.NewAppError(entities.ErrTypeInternal, "failed to count transactions", err)
+	}
+
+	if total == 0 {
+		return []entities.TransactionEntity{}, 0, nil
+	}
+
+	transactions, err := s.transactionRepo.GetTransactions(accountID, q)
+	if err != nil {
+		return nil, 0, entities.NewAppError(entities.ErrTypeInternal, "failed to get transactions", err)
+	}
+
+	return transactions, total, nil
 }
 
 func (s *transactionService) QueryTransactionSummary(ctx context.Context, month, year int) (*TransactionChartSummary, error) {

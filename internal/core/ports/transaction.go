@@ -16,6 +16,7 @@ type TransactionRepository interface {
 	GetTransactionByID(id int) (*entities.TransactionEntity, error)
 	GetTransactionByAccountID(accountID int) ([]entities.TransactionEntity, error)
 	GetTransactionByUUID(txUUID uuid.UUID) (*entities.TransactionEntity, error)
-	GetTransactions(accountID uint, q request.TransactionQuery) ([]entities.TransactionEntity, int64, error)
+	CountTransactions(accountID uint, q request.TransactionQuery) (int64, error)
+	GetTransactions(accountID uint, q request.TransactionQuery) ([]entities.TransactionEntity, error)
 	QueryTransactionSummary(txCtx context.Context, month, year int) ([]entities.TransactionSummary, error)
 }
