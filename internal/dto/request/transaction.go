@@ -18,3 +18,26 @@ type TransactionMessage struct {
 	SourceWorker string `json:"source_worker"`
 	Status       string `json:"status"`
 }
+
+type TransactionQuery struct {
+	Page     int    `query:"page"`
+	PageSize int    `query:"pageSize"`
+	TxType   string `query:"txType"`
+}
+
+func (q *TransactionQuery) GetOffset() int {
+	if q.Page <= 0 {
+		q.Page = 1
+	}
+	if q.PageSize <= 0 {
+		q.PageSize = 10
+	}
+	return (q.Page - 1) * q.PageSize
+}
+
+func (q *TransactionQuery) GetLimit() int {
+	if q.PageSize <= 0 {
+		return 10
+	}
+	return q.PageSize
+}

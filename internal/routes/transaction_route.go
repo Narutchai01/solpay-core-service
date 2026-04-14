@@ -35,4 +35,5 @@ func (trc *TransactionRouteConfig) Setup() {
 
 	trc.route.Post("/", transactionHandler.CreateTransaction)
 	trc.route.Get("/:id", transactionHandler.GetTransactionByIDHandler)
+	trc.route.Get("/", transactionHandler.GetTransactionsHandler)
 }

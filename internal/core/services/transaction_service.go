@@ -23,6 +23,7 @@ type TransactionService interface {
 	CreateTransaction(ctx context.Context, req request.CreateTransactionRequest) (*entities.TransactionEntity, error)
 	GetTransactionByID(id int) (*entities.TransactionEntity, error)
 	HandleTransactionUpdate(ctx context.Context, msg []byte) error
+	GetTransactions(accountID uint, q request.TransactionQuery) ([]entities.TransactionEntity, int64, error)
 }
 
 type transactionService struct {
@@ -366,4 +367,8 @@ func (s *transactionService) publishPaymentTransaction(tx *entities.TransactionE
 	}
 
 	return nil
+}
+
+func (s *transactionService) GetTransactions(accountID uint, q request.TransactionQuery) ([]entities.TransactionEntity, int64, error) {
+	return s.transactionRepo.GetTransactions(accountID, q)
 }

@@ -3,6 +3,7 @@ package ports
 import (
 	"context"
 
+	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
 	"github.com/google/uuid"
 )
@@ -15,4 +16,5 @@ type TransactionRepository interface {
 	GetTransactionByID(id int) (*entities.TransactionEntity, error)
 	GetTransactionByAccountID(accountID int) ([]entities.TransactionEntity, error)
 	GetTransactionByUUID(txUUID uuid.UUID) (*entities.TransactionEntity, error)
+	GetTransactions(accountID uint, q request.TransactionQuery) ([]entities.TransactionEntity, int64, error)
 }

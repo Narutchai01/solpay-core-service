@@ -6,6 +6,7 @@ import (
 
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/db"
+	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -78,4 +79,32 @@ func (r *transactionRepository) GetTransactionByUUID(txUUID uuid.UUID) (*entitie
 		return nil, err
 	}
 	return &transaction, nil
+}
+
+func (r *transactionRepository) GetTransactions(accountID uint, q request.TransactionQuery) ([]entities.TransactionEntity, int64, error) {
+	var transactions []entities.TransactionEntity
+	var total int64
+
+	db := r.db.Model(&entities.TransactionEntity{})
+
+	if accountID > 0 {
+		db = db.Where("account_id = ?", accountID)
+	}
+
+	if q.TxType != "" {
+		db = db.Where("transaction_type = ?", q.TxType)
+	}
+
+	if err := db.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	err := db.Order("created_at DESC").
+		Limit(q.GetLimit()).
+		Offset(q.GetOffset()).
+		Preload("TransactionOnChain").
+		Preload("TransactionOffChain").
+		Find(&transactions).Error
+
+	return transactions, total, err
 }
