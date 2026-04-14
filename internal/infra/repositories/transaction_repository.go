@@ -81,27 +81,40 @@ func (r *transactionRepository) GetTransactionByUUID(txUUID uuid.UUID) (*entitie
 	return &transaction, nil
 }
 
-func (r *transactionRepository) CountTransactions(accountID uint, q request.TransactionQuery) (int64, error) {
+func (r *transactionRepository) CountTransactions(query request.TransactionQuery, accountID *uint) (int64, error) {
 	var total int64
 
-	err := r.db.Model(&entities.TransactionEntity{}).
-		Where(&entities.TransactionEntity{
-			AccountID:       accountID,
-			TransactionType: q.TxType,
-		}).
-		Count(&total).Error
+	q := r.db.Model(&entities.TransactionEntity{})
+
+	if accountID != nil {
+		q = q.Where("account_id = ?", *accountID)
+	}
+
+	if query.TxType != "" {
+		q = q.Where("transaction_type = ?", query.TxType)
+	}
+
+	err := q.Count(&total).Error
 
 	return total, err
 }
 
-func (r *transactionRepository) GetTransactions(accountID uint, q request.TransactionQuery) ([]entities.TransactionEntity, error) {
+func (r *transactionRepository) GetTransactions(query request.TransactionQuery, accountID *uint) ([]entities.TransactionEntity, error) {
 	var transactions []entities.TransactionEntity
 
-	err := r.db.Model(&entities.TransactionEntity{}).
-		Where("account_id = ? AND transaction_type = ?", accountID, q.TxType).
-		Order("created_at DESC").
-		Limit(q.GetLimit()).
-		Offset(q.GetOffset()).
+	q := r.db.Model(&entities.TransactionEntity{})
+
+	if accountID != nil {
+		q = q.Where("account_id = ?", *accountID)
+	}
+
+	if query.TxType != "" {
+		q = q.Where("transaction_type = ?", query.TxType)
+	}
+
+	err := q.Order("created_at DESC").
+		Limit(query.GetLimit()).
+		Offset(query.GetOffset()).
 		Preload("TransactionOnChain").
 		Preload("TransactionOffChain").
 		Find(&transactions).Error
