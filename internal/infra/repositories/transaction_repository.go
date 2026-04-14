@@ -6,6 +6,7 @@ import (
 
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/db"
+	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -78,6 +79,34 @@ func (r *transactionRepository) GetTransactionByUUID(txUUID uuid.UUID) (*entitie
 		return nil, err
 	}
 	return &transaction, nil
+}
+
+func (r *transactionRepository) CountTransactions(accountID uint, q request.TransactionQuery) (int64, error) {
+	var total int64
+
+	err := r.db.Model(&entities.TransactionEntity{}).
+		Where(&entities.TransactionEntity{
+			AccountID:       accountID,
+			TransactionType: q.TxType,
+		}).
+		Count(&total).Error
+
+	return total, err
+}
+
+func (r *transactionRepository) GetTransactions(accountID uint, q request.TransactionQuery) ([]entities.TransactionEntity, error) {
+	var transactions []entities.TransactionEntity
+
+	err := r.db.Model(&entities.TransactionEntity{}).
+		Where("account_id = ? AND transaction_type = ?", accountID, q.TxType).
+		Order("created_at DESC").
+		Limit(q.GetLimit()).
+		Offset(q.GetOffset()).
+		Preload("TransactionOnChain").
+		Preload("TransactionOffChain").
+		Find(&transactions).Error
+
+	return transactions, err
 }
 
 func (r *transactionRepository) QueryTransactionSummary(txCtx context.Context, month, year int) ([]entities.TransactionSummary, error) {

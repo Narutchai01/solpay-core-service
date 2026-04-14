@@ -40,6 +40,7 @@ type TransactionService interface {
 	GetTransactionByID(id int) (*entities.TransactionEntity, error)
 	QueryTransactionSummary(ctx context.Context, month, year int) (*TransactionChartSummary, error)
 	HandleTransactionUpdate(ctx context.Context, msg []byte) error
+	GetTransactions(accountID uint, q request.TransactionQuery) ([]entities.TransactionEntity, int64, error)
 }
 
 type transactionService struct {
@@ -383,6 +384,24 @@ func (s *transactionService) publishPaymentTransaction(tx *entities.TransactionE
 	}
 
 	return nil
+}
+
+func (s *transactionService) GetTransactions(accountID uint, q request.TransactionQuery) ([]entities.TransactionEntity, int64, error) {
+	total, err := s.transactionRepo.CountTransactions(accountID, q)
+	if err != nil {
+		return nil, 0, entities.NewAppError(entities.ErrTypeInternal, "failed to count transactions", err)
+	}
+
+	if total == 0 {
+		return []entities.TransactionEntity{}, 0, nil
+	}
+
+	transactions, err := s.transactionRepo.GetTransactions(accountID, q)
+	if err != nil {
+		return nil, 0, entities.NewAppError(entities.ErrTypeInternal, "failed to get transactions", err)
+	}
+
+	return transactions, total, nil
 }
 
 func (s *transactionService) QueryTransactionSummary(ctx context.Context, month, year int) (*TransactionChartSummary, error) {
