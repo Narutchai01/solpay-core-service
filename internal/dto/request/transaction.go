@@ -18,3 +18,8 @@ type TransactionMessage struct {
 	SourceWorker string `json:"source_worker"`
 	Status       string `json:"status"`
 }
+
+type QueryTransactionSummaryRequest struct {
+	Month string `json:"month"`
+	Year  string `json:"year"`
+}
