@@ -107,6 +107,8 @@ func (r *transactionRepository) GetTransactions(accountID uint, q request.Transa
 		Find(&transactions).Error
 
 	return transactions, total, err
+}
+
 func (r *transactionRepository) QueryTransactionSummary(txCtx context.Context, month, year int) ([]entities.TransactionSummary, error) {
 	tx := db.GetTx(txCtx, r.db)
 

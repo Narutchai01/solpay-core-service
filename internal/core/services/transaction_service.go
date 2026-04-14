@@ -388,6 +388,8 @@ func (s *transactionService) publishPaymentTransaction(tx *entities.TransactionE
 
 func (s *transactionService) GetTransactions(accountID uint, q request.TransactionQuery) ([]entities.TransactionEntity, int64, error) {
 	return s.transactionRepo.GetTransactions(accountID, q)
+}
+
 func (s *transactionService) QueryTransactionSummary(ctx context.Context, month, year int) (*TransactionChartSummary, error) {
 	rows, err := s.transactionRepo.QueryTransactionSummary(ctx, month, year)
 	if err != nil {

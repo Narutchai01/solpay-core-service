@@ -81,6 +81,9 @@ func (h *transactionHandler) GetTransactionsHandler(c *fiber.Ctx) error {
 		"total":    total,
 		"page":     q.Page,
 		"pageSize": q.PageSize,
+	}, nil)
+}
+
 func (h *transactionHandler) QueryTransactionSummaryHandler(c *fiber.Ctx) error {
 	query := new(request.QueryTransactionSummaryRequest)
 
