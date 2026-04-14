@@ -107,4 +107,43 @@ func (r *transactionRepository) GetTransactions(accountID uint, q request.Transa
 		Find(&transactions).Error
 
 	return transactions, total, err
+func (r *transactionRepository) QueryTransactionSummary(txCtx context.Context, month, year int) ([]entities.TransactionSummary, error) {
+	tx := db.GetTx(txCtx, r.db)
+
+	rows, err := tx.Raw(`
+		SELECT
+			TO_CHAR(created_at, 'YYYY-MM-DD') AS date,
+			transaction_type,
+			COALESCE(
+				CASE
+					WHEN transaction_type = 'TOPUP'    THEN SUM(usdt_amount)
+					WHEN transaction_type = 'OFFCHAIN' THEN SUM(thb_amount)
+					ELSE 0
+				END, 0
+			) AS total_amount,
+			COUNT(*) AS total_count
+		FROM transaction_entities
+		WHERE
+			deleted_at IS NULL
+			AND status = 'COMPLETED'
+			AND EXTRACT(MONTH FROM created_at) = ?
+			AND EXTRACT(YEAR  FROM created_at) = ?
+		GROUP BY date, transaction_type
+		ORDER BY date ASC
+	`, month, year).Rows()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var summaries []entities.TransactionSummary
+	for rows.Next() {
+		var s entities.TransactionSummary
+		if err := rows.Scan(&s.Date, &s.TransactionType, &s.TotalAmount, &s.TotalCount); err != nil {
+			return nil, err
+		}
+		summaries = append(summaries, s)
+	}
+
+	return summaries, nil
 }

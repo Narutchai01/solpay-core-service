@@ -40,4 +40,7 @@ func (q *TransactionQuery) GetLimit() int {
 		return 10
 	}
 	return q.PageSize
+type QueryTransactionSummaryRequest struct {
+	Month string `json:"month"`
+	Year  string `json:"year"`
 }

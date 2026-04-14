@@ -70,3 +70,10 @@ func (t *TransactionEntity) BeforeCreate(tx *gorm.DB) (err error) {
 	}
 	return
 }
+
+type TransactionSummary struct {
+	Date            string  `json:"date"`
+	TransactionType string  `json:"transaction_type"`
+	TotalAmount     float64 `json:"total_amount"`
+	TotalCount      int     `json:"total_count"`
+}
