@@ -10,6 +10,7 @@ import (
 	"github.com/Narutchai01/solpay-core-service/internal/utils"
 	"github.com/Narutchai01/solpay-core-service/internal/websocket"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/omise/omise-go"
 )
@@ -38,6 +39,13 @@ func New(cfg *config.Config, queueConfig []rabbitmq.QueueConfig) *Server {
 func (s *Server) Start() error {
 	s.app.Use(logger.New(logger.Config{
 		TimeZone: s.cfg.TimeZone,
+	}))
+
+	s.app.Use(cors.New(cors.Config{
+		AllowOrigins:     "http://localhost:3000",
+		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
+		AllowCredentials: true,
 	}))
 
 	s.app.Get("/", func(c *fiber.Ctx) error {
