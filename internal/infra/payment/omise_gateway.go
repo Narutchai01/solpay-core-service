@@ -50,7 +50,7 @@ func (g *omiseGateway) CreateTransfer(amountSatang int64, recipientID string) (*
 	transfer := &omise.Transfer{}
 
 	op := &operations.CreateTransfer{
-		Amount:    (amountSatang * 100) + 3000,
+		Amount:    amountSatang + 3000,
 		Recipient: recipientID,
 		FailFast:  true,
 	}
