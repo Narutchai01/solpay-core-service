@@ -17,6 +17,7 @@ type TransactionHandler interface {
 	GetTransactionByIDHandler(c *fiber.Ctx) error
 	GetTransactionsHandler(c *fiber.Ctx) error
 	QueryTransactionSummaryHandler(c *fiber.Ctx) error
+	GetTransactionsByAccountIDHandler(c *fiber.Ctx) error
 }
 
 type transactionHandler struct {
@@ -66,7 +67,7 @@ func (h *transactionHandler) GetTransactionsHandler(c *fiber.Ctx) error {
 		return utils.HandleResponse(c, nil, entities.NewAppError(entities.ErrTypeBadRequest, "invalid query parameters", err))
 	}
 
-	txs, total, err := h.transactionService.GetTransactions(0, q)
+	txs, total, err := h.transactionService.GetTransactions(q, nil)
 	if err != nil {
 		return utils.HandleResponse(c, nil, err)
 	}
@@ -112,5 +113,35 @@ func (h *transactionHandler) QueryTransactionSummaryHandler(c *fiber.Ctx) error 
 			"totalWithdraw": summary.TotalWithdraw,
 		},
 		"chartData": summary.ChartData,
+	}, nil)
+}
+
+func (h *transactionHandler) GetTransactionsByAccountIDHandler(c *fiber.Ctx) error {
+
+	accountID, ok := utils.GetUserIDFromLocals(c)
+	if !ok {
+		return utils.HandleResponse(c, nil, fiber.NewError(fiber.StatusUnauthorized, "unauthorized"))
+	}
+
+	var q request.TransactionQuery
+	if err := c.QueryParser(&q); err != nil {
+		return utils.HandleResponse(c, nil, entities.NewAppError(entities.ErrTypeBadRequest, "invalid query parameters", err))
+	}
+
+	txs, total, err := h.transactionService.GetTransactions(q, &accountID)
+	if err != nil {
+		return utils.HandleResponse(c, nil, err)
+	}
+
+	formattedTxs := make([]*response.TransactionDTO, len(txs))
+	for i, tx := range txs {
+		formattedTxs[i] = response.FormatTransactionDTO(&tx)
+	}
+
+	return utils.HandleResponse(c, fiber.Map{
+		"items":    formattedTxs,
+		"total":    total,
+		"page":     q.Page,
+		"pageSize": q.PageSize,
 	}, nil)
 }

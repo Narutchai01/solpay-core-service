@@ -5,6 +5,7 @@ import (
 	"github.com/Narutchai01/solpay-core-service/internal/handler"
 	"github.com/Narutchai01/solpay-core-service/internal/infra/rabbitmq"
 	"github.com/Narutchai01/solpay-core-service/internal/infra/repositories"
+	"github.com/Narutchai01/solpay-core-service/internal/middlewares"
 	"github.com/gofiber/fiber/v2"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"gorm.io/gorm"
@@ -34,7 +35,8 @@ func (trc *TransactionRouteConfig) Setup() {
 	transactionHandler := handler.NewTransactionHandler(transactionService)
 
 	trc.route.Post("/", transactionHandler.CreateTransaction)
-	trc.route.Get("/summary", transactionHandler.QueryTransactionSummaryHandler)
-	trc.route.Get("/:id", transactionHandler.GetTransactionByIDHandler)
 	trc.route.Get("/", transactionHandler.GetTransactionsHandler)
+	trc.route.Get("/summary", transactionHandler.QueryTransactionSummaryHandler)
+	trc.route.Get("/me", middlewares.AuthRequired(), transactionHandler.GetTransactionsByAccountIDHandler)
+	trc.route.Get("/:id", transactionHandler.GetTransactionByIDHandler)
 }
