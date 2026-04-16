@@ -88,6 +88,8 @@ func (s *quoteService) CreateQuote(req request.CreateQuoteRequest, accountID uin
 		USDTAmount:   quote.USDTAmount,
 		ExchangeRate: quote.ExchangeRate,
 		Fee:          quote.Fee,
+		QuoteTpye:    quote.Type,
+		PromptPayID:  quote.PromptPayID,
 	}
 
 	return quoteResp, nil
@@ -103,6 +105,8 @@ func (s *quoteService) GetQuoteByID(id string) (response.QuoteResponse, error) {
 		THBAmount:    float64(quote.THBAmount) / 100, // แปลงกลับเป็นบาท
 		USDTAmount:   quote.USDTAmount,
 		ExchangeRate: quote.ExchangeRate,
+		PromptPayID:  quote.PromptPayID,
+		QuoteTpye:    quote.Type,
 		Fee:          quote.Fee,
 	}
 	return quoteResp, nil
