@@ -109,8 +109,10 @@ func (h *transactionHandler) QueryTransactionSummaryHandler(c *fiber.Ctx) error 
 
 	return utils.HandleResponse(c, fiber.Map{
 		"summary": fiber.Map{
-			"totalDeposit":  summary.TotalDeposit,
-			"totalWithdraw": summary.TotalWithdraw,
+			"totalDeposit":        summary.TotalDeposit,
+			"totalWithdraw":       summary.TotalWithdraw,
+			"totalFee":            summary.TotalFee,
+			"totalCompletedCount": summary.TotalCompletedCount,
 		},
 		"chartData": summary.ChartData,
 	}, nil)

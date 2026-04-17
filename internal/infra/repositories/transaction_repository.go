@@ -133,9 +133,13 @@ func (r *transactionRepository) QueryTransactionSummary(txCtx context.Context, m
 				CASE
 					WHEN transaction_type = 'TOPUP'    THEN SUM(usdt_amount)
 					WHEN transaction_type = 'OFFCHAIN' THEN SUM(thb_amount)
+					WHEN transaction_type = 'ONCHAIN' THEN SUM(thb_amount)
 					ELSE 0
 				END, 0
 			) AS total_amount,
+			COALESCE(SUM(thb_amount), 0) AS total_thb_amount,
+			COALESCE(SUM(usdt_amount), 0) AS total_usdt_amount,
+			COALESCE(SUM(fee), 0) AS total_fee,
 			COUNT(*) AS total_count
 		FROM transaction_entities
 		WHERE
@@ -154,7 +158,7 @@ func (r *transactionRepository) QueryTransactionSummary(txCtx context.Context, m
 	var summaries []entities.TransactionSummary
 	for rows.Next() {
 		var s entities.TransactionSummary
-		if err := rows.Scan(&s.Date, &s.TransactionType, &s.TotalAmount, &s.TotalCount); err != nil {
+		if err := rows.Scan(&s.Date, &s.TransactionType, &s.TotalAmount, &s.TotalTHBAmount, &s.TotalUSDTAmount, &s.TotalFee, &s.TotalCount); err != nil {
 			return nil, err
 		}
 		summaries = append(summaries, s)

@@ -75,5 +75,8 @@ type TransactionSummary struct {
 	Date            string  `json:"date"`
 	TransactionType string  `json:"transaction_type"`
 	TotalAmount     float64 `json:"total_amount"`
+	TotalTHBAmount  float64 `json:"total_thb_amount"`
+	TotalUSDTAmount float64 `json:"total_usdt_amount"`
+	TotalFee        float64 `json:"total_fee"`
 	TotalCount      int     `json:"total_count"`
 }
