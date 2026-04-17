@@ -1,6 +1,22 @@
 package response
 
-import "github.com/Narutchai01/solpay-core-service/internal/entities"
+import (
+	"math"
+	"strconv"
+
+	"github.com/Narutchai01/solpay-core-service/internal/entities"
+)
+
+// Decimal2 is encoded as a JSON number with exactly 2 decimal places.
+type Decimal2 float64
+
+func NewDecimal2(v float64) Decimal2 {
+	return Decimal2(math.Round(v*100) / 100)
+}
+
+func (d Decimal2) MarshalJSON() ([]byte, error) {
+	return []byte(strconv.FormatFloat(float64(d), 'f', 2, 64)), nil
+}
 
 // TransactionDTO is the API representation of a transaction.
 type TransactionDTO struct {
@@ -41,4 +57,20 @@ func FormatTransactionDTOs(transactions []entities.TransactionEntity) []Transact
 		dtos = append(dtos, *FormatTransactionDTO(&tx))
 	}
 	return dtos
+}
+
+type TransactionChartData struct {
+	Date     string   `json:"date"`
+	Label    string   `json:"label"`
+	Deposit  float64  `json:"deposit"`
+	Withdraw Decimal2 `json:"withdraw"`
+	Fee      float64  `json:"fee"`
+}
+
+type TransactionChartSummary struct {
+	TotalDeposit        float64                `json:"totalDeposit"`
+	TotalWithdraw       Decimal2               `json:"totalWithdraw"`
+	TotalFee            float64                `json:"totalFee"`
+	TotalCompletedCount int                    `json:"totalCompletedCount"`
+	ChartData           []TransactionChartData `json:"chartData"`
 }

@@ -6,11 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"time"
 
 	"github.com/Narutchai01/solpay-core-service/internal/config"
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
+	"github.com/Narutchai01/solpay-core-service/internal/dto/response"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
 	"github.com/Narutchai01/solpay-core-service/internal/models"
 	"github.com/google/uuid"
@@ -19,26 +21,15 @@ import (
 const errPublisherNotConfigured = "publisher is not configured"
 const errUpdateTransactionStatusFmt = "update transaction status: %w"
 
-// TransactionChartData holds deposit and withdraw totals for a single day.
-type TransactionChartData struct {
-	Date     string  `json:"date"`
-	Label    string  `json:"label"`
-	Deposit  float64 `json:"deposit"`
-	Withdraw float64 `json:"withdraw"`
-}
-
-// TransactionChartSummary is the top-level response for the chart endpoint.
-type TransactionChartSummary struct {
-	TotalDeposit  float64                `json:"totalDeposit"`
-	TotalWithdraw float64                `json:"totalWithdraw"`
-	ChartData     []TransactionChartData `json:"chartData"`
+func satangToTHB(amount float64) float64 {
+	return math.Round((amount/100.0)*100) / 100
 }
 
 // TransactionService defines operations for managing transactions.
 type TransactionService interface {
 	CreateTransaction(ctx context.Context, req request.CreateTransactionRequest) (*entities.TransactionEntity, error)
 	GetTransactionByID(id int) (*entities.TransactionEntity, error)
-	QueryTransactionSummary(ctx context.Context, month, year int) (*TransactionChartSummary, error)
+	QueryTransactionSummary(ctx context.Context, month, year int) (*response.TransactionChartSummary, error)
 	HandleTransactionUpdate(ctx context.Context, msg []byte) error
 	GetTransactions(query request.TransactionQuery, accountID *uint) ([]entities.TransactionEntity, int64, error)
 }
@@ -404,7 +395,7 @@ func (s *transactionService) GetTransactions(query request.TransactionQuery, acc
 	return transactions, total, nil
 }
 
-func (s *transactionService) QueryTransactionSummary(ctx context.Context, month, year int) (*TransactionChartSummary, error) {
+func (s *transactionService) QueryTransactionSummary(ctx context.Context, month, year int) (*response.TransactionChartSummary, error) {
 	rows, err := s.transactionRepo.QueryTransactionSummary(ctx, month, year)
 	if err != nil {
 		return nil, entities.NewAppError(entities.ErrTypeInternal, "failed to query transaction summary", err)
@@ -412,38 +403,51 @@ func (s *transactionService) QueryTransactionSummary(ctx context.Context, month,
 
 	// Index raw rows by date+type for O(1) lookup
 	type key struct{ date, txType string }
-	indexed := make(map[key]float64, len(rows))
+	indexedTHBAmount := make(map[key]float64, len(rows))
+	indexedUSDTAmount := make(map[key]float64, len(rows))
+	indexedFee := make(map[key]float64, len(rows))
+	totalCompletedCount := 0
 	for _, r := range rows {
-		indexed[key{r.Date, r.TransactionType}] = r.TotalAmount
+		k := key{r.Date, r.TransactionType}
+		indexedTHBAmount[k] = r.TotalTHBAmount
+		indexedUSDTAmount[k] = r.TotalUSDTAmount
+		indexedFee[k] = r.TotalFee
+		totalCompletedCount += r.TotalCount
 	}
 
 	// Build a full calendar for the requested month (all days, no gaps)
 	daysInMonth := time.Date(year, time.Month(month)+1, 0, 0, 0, 0, 0, time.UTC).Day()
 
-	chartData := make([]TransactionChartData, 0, daysInMonth)
-	var totalDeposit, totalWithdraw float64
+	chartData := make([]response.TransactionChartData, 0, daysInMonth)
+	var totalDeposit, totalWithdraw, totalFee float64
 
 	for day := 1; day <= daysInMonth; day++ {
 		date := fmt.Sprintf("%04d-%02d-%02d", year, month, day)
 		label := fmt.Sprintf("%02d", day)
 
-		deposit := indexed[key{date, string(entities.TOPUP)}]
-		withdraw := indexed[key{date, string(entities.OFFCHAIN)}]
+		deposit := indexedUSDTAmount[key{date, string(entities.TOPUP)}] + indexedUSDTAmount[key{date, string(entities.ONCHAIN)}]
+		withdraw := indexedTHBAmount[key{date, string(entities.OFFCHAIN)}] + indexedTHBAmount[key{date, string(entities.ONCHAIN)}]
+		withdrawTHB := satangToTHB(withdraw)
+		fee := indexedFee[key{date, string(entities.TOPUP)}] + indexedFee[key{date, string(entities.OFFCHAIN)}] + indexedFee[key{date, string(entities.ONCHAIN)}]
 
 		totalDeposit += deposit
 		totalWithdraw += withdraw
+		totalFee += fee
 
-		chartData = append(chartData, TransactionChartData{
+		chartData = append(chartData, response.TransactionChartData{
 			Date:     date,
 			Label:    label,
 			Deposit:  deposit,
-			Withdraw: withdraw,
+			Withdraw: response.NewDecimal2(withdrawTHB),
+			Fee:      fee,
 		})
 	}
 
-	return &TransactionChartSummary{
-		TotalDeposit:  totalDeposit,
-		TotalWithdraw: totalWithdraw,
-		ChartData:     chartData,
+	return &response.TransactionChartSummary{
+		TotalDeposit:        totalDeposit,
+		TotalWithdraw:       response.NewDecimal2(satangToTHB(totalWithdraw)),
+		TotalFee:            totalFee,
+		TotalCompletedCount: totalCompletedCount,
+		ChartData:           chartData,
 	}, nil
 }
