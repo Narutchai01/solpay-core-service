@@ -284,7 +284,7 @@ func (s *transactionService) updateStatusAndNotify(ctx context.Context, txID str
 		return nil
 	}
 
-	jsonPayload, err := json.Marshal(tx)
+	jsonPayload, err := json.Marshal(response.FormatTransactionDTO(tx))
 	if err != nil {
 		log.Printf("failed to marshal websocket transaction payload: %v", err)
 		return nil

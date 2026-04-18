@@ -20,17 +20,17 @@ func (d Decimal2) MarshalJSON() ([]byte, error) {
 
 // TransactionDTO is the API representation of a transaction.
 type TransactionDTO struct {
-	ID              uint    `json:"id"`
-	TransactionUUID string  `json:"transaction_uuid"`
-	AccountID       uint    `json:"account_id"`
-	CategoryID      string  `json:"category_id"`
-	TransactionType string  `json:"transaction_type"`
-	Status          string  `json:"status"`
-	THBAmount       float64 `json:"thb_amount"`
-	USDTAmount      float64 `json:"usdt_amount"`
-	Fee             float64 `json:"fee"`
-	CreatedAt       string  `json:"created_at"`
-	UpdatedAt       string  `json:"updated_at"`
+	ID              uint     `json:"id"`
+	TransactionUUID string   `json:"transaction_uuid"`
+	AccountID       uint     `json:"account_id"`
+	CategoryID      string   `json:"category_id"`
+	TransactionType string   `json:"transaction_type"`
+	Status          string   `json:"status"`
+	THBAmount       Decimal2 `json:"thb_amount"`
+	USDTAmount      float64  `json:"usdt_amount"`
+	Fee             float64  `json:"fee"`
+	CreatedAt       string   `json:"created_at"`
+	UpdatedAt       string   `json:"updated_at"`
 }
 
 // FormatTransactionDTO converts a TransactionEntity to its API representation.
@@ -42,7 +42,7 @@ func FormatTransactionDTO(transaction *entities.TransactionEntity) *TransactionD
 		CategoryID:      transaction.CategoryID,
 		TransactionType: transaction.TransactionType,
 		Status:          transaction.Status,
-		THBAmount:       transaction.THBAmount,
+		THBAmount:       NewDecimal2(transaction.THBAmount / 100),
 		USDTAmount:      transaction.USDTAmount,
 		Fee:             transaction.Fee,
 		CreatedAt:       transaction.CreatedAt.String(),

@@ -3,6 +3,7 @@ package handler
 import (
 	"github.com/Narutchai01/solpay-core-service/internal/core/services"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
+	"github.com/Narutchai01/solpay-core-service/internal/dto/response"
 	"github.com/Narutchai01/solpay-core-service/internal/utils"
 	"github.com/gofiber/fiber/v2"
 )
@@ -39,5 +40,5 @@ func (h *onchainHandler) ConfirmOnchainHandler(c *fiber.Ctx) error {
 		return utils.HandleResponse(c, nil, err)
 	}
 
-	return utils.HandleResponse(c, tx, nil)
+	return utils.HandleResponse(c, response.FormatTransactionDTO(&tx), nil)
 }

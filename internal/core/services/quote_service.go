@@ -84,7 +84,7 @@ func (s *quoteService) CreateQuote(req request.CreateQuoteRequest, accountID uin
 
 	quoteResp := response.QuoteResponse{
 		QuoteID:      quote.ID,
-		THBAmount:    float64(quote.THBAmount) / 100, // แปลงกลับเป็นบาท
+		THBAmount:    response.NewDecimal2(float64(quote.THBAmount) / 100), // แปลงกลับเป็นบาท
 		USDTAmount:   quote.USDTAmount,
 		ExchangeRate: quote.ExchangeRate,
 		Fee:          quote.Fee,
@@ -102,7 +102,7 @@ func (s *quoteService) GetQuoteByID(id string) (response.QuoteResponse, error) {
 	}
 	quoteResp := response.QuoteResponse{
 		QuoteID:      quote.ID,
-		THBAmount:    float64(quote.THBAmount) / 100, // แปลงกลับเป็นบาท
+		THBAmount:    response.NewDecimal2(float64(quote.THBAmount) / 100), // แปลงกลับเป็นบาท
 		USDTAmount:   quote.USDTAmount,
 		ExchangeRate: quote.ExchangeRate,
 		PromptPayID:  quote.PromptPayID,
