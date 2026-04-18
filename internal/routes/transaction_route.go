@@ -38,5 +38,5 @@ func (trc *TransactionRouteConfig) Setup() {
 	trc.route.Get("/", transactionHandler.GetTransactionsHandler)
 	trc.route.Get("/summary", transactionHandler.QueryTransactionSummaryHandler)
 	trc.route.Get("/me", middlewares.AuthRequired(), transactionHandler.GetTransactionsByAccountIDHandler)
-	trc.route.Get("/:id", transactionHandler.GetTransactionByIDHandler)
+	trc.route.Get("/:uuid", transactionHandler.GetTransactionByUUIDHandler)
 }

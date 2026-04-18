@@ -28,7 +28,7 @@ func satangToTHB(amount float64) float64 {
 // TransactionService defines operations for managing transactions.
 type TransactionService interface {
 	CreateTransaction(ctx context.Context, req request.CreateTransactionRequest) (*entities.TransactionEntity, error)
-	GetTransactionByID(id int) (*entities.TransactionEntity, error)
+	GetTransactionByUUID(txUUID uuid.UUID) (*entities.TransactionEntity, error)
 	QueryTransactionSummary(ctx context.Context, month, year int) (*response.TransactionChartSummary, error)
 	HandleTransactionUpdate(ctx context.Context, msg []byte) error
 	GetTransactions(query request.TransactionQuery, accountID *uint) ([]entities.TransactionEntity, int64, error)
@@ -134,11 +134,11 @@ func (s *transactionService) createTransactionOffChain(ctx context.Context, req 
 // GetTransactionByID
 // ---------------------------------------------------------------------------
 
-func (s *transactionService) GetTransactionByID(id int) (*entities.TransactionEntity, error) {
-	tx, err := s.transactionRepo.GetTransactionByID(id)
+func (s *transactionService) GetTransactionByUUID(txUUID uuid.UUID) (*entities.TransactionEntity, error) {
+	tx, err := s.transactionRepo.GetTransactionByUUID(txUUID)
 	if err != nil {
 		if errors.Is(err, entities.ErrNotFound) {
-			return nil, entities.NewAppError(entities.ErrTypeNotFound, fmt.Sprintf("transaction %d not found", id), err)
+			return nil, entities.NewAppError(entities.ErrTypeNotFound, fmt.Sprintf("transaction %s not found", txUUID), err)
 		}
 		return nil, entities.NewAppError(entities.ErrTypeInternal, "failed to get transaction", err)
 	}

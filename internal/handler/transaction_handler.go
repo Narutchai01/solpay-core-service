@@ -2,6 +2,7 @@ package handler
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/Narutchai01/solpay-core-service/internal/core/services"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
@@ -9,12 +10,13 @@ import (
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
 	"github.com/Narutchai01/solpay-core-service/internal/utils"
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 )
 
 // TransactionHandler defines HTTP handlers for transaction operations.
 type TransactionHandler interface {
 	CreateTransaction(c *fiber.Ctx) error
-	GetTransactionByIDHandler(c *fiber.Ctx) error
+	GetTransactionByUUIDHandler(c *fiber.Ctx) error
 	GetTransactionsHandler(c *fiber.Ctx) error
 	QueryTransactionSummaryHandler(c *fiber.Ctx) error
 	GetTransactionsByAccountIDHandler(c *fiber.Ctx) error
@@ -46,14 +48,15 @@ func (h *transactionHandler) CreateTransaction(c *fiber.Ctx) error {
 	return utils.HandleResponse(c, response.FormatTransactionDTO(transaction), nil)
 }
 
-func (h *transactionHandler) GetTransactionByIDHandler(c *fiber.Ctx) error {
-	id, err := c.ParamsInt("id")
+func (h *transactionHandler) GetTransactionByUUIDHandler(c *fiber.Ctx) error {
+	txUUIDStr := strings.TrimSpace(c.Params("uuid"))
+
+	txUUID, err := uuid.Parse(txUUIDStr)
 	if err != nil {
-		msg := utils.FormatValidationError(err)
-		return utils.HandleResponse(c, nil, entities.NewAppError(entities.ErrTypeBadRequest, msg, err))
+		return utils.HandleResponse(c, nil, entities.NewAppError(entities.ErrTypeBadRequest, "Invalid input data", err))
 	}
 
-	transaction, err := h.transactionService.GetTransactionByID(id)
+	transaction, err := h.transactionService.GetTransactionByUUID(txUUID)
 	if err != nil {
 		return utils.HandleResponse(c, nil, err)
 	}
