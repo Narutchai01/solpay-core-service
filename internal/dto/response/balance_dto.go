@@ -1,16 +1,14 @@
 package response
 
 import (
-	"math"
-
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
 )
 
 // BalanceDTO is the API representation of a balance.
 type BalanceDTO struct {
-	ID        uint    `json:"id"`
-	AccountID uint    `json:"account_id"`
-	THBAmount float64 `json:"thb_amount"`
+	ID        uint     `json:"id"`
+	AccountID uint     `json:"account_id"`
+	THBAmount Decimal2 `json:"thb_amount"`
 	// USDTAmount float64 `json:"usdt_amount"`
 	// CreatedAt  string  `json:"created_at"`
 	// UpdatedAt  string  `json:"updated_at"`
@@ -18,9 +16,7 @@ type BalanceDTO struct {
 
 // FormatBalanceDTO converts a BalanceEntity to its API representation.
 func FormatBalanceDTO(balance *entities.BalanceEntity) *BalanceDTO {
-	const divisor = 10000.0
-
-	thbAmount := math.Round(float64(balance.THBAmount) / divisor * 100)
+	thbAmount := NewDecimal2(float64(balance.THBAmount) / 100)
 
 	return &BalanceDTO{
 		ID:        balance.ID,
