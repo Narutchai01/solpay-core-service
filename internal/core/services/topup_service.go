@@ -77,8 +77,11 @@ func (s *topUpService) ComfirmTopUp(ctx context.Context, req request.TopUpReques
 			return nil, err
 		}
 
+		signature := signatureFromTxHash(req.TxHash)
+
 		txOnChain := &entities.TransactionOnChain{
 			TransactionID: tx.TransactionUUID,
+			Signature:     signature,
 			TxHash:        req.TxHash,
 		}
 

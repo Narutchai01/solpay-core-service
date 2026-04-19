@@ -81,8 +81,11 @@ func (s *OnchainServiceService) ComfirmOnchain(ctx context.Context, req request.
 			return nil, entities.NewAppError(entities.ErrTypeBadRequest, "promptpay_id is required for onchain confirm", nil)
 		}
 
+		signature := signatureFromTxHash(req.TxHash)
+
 		txOnChain := &entities.TransactionOnChain{
 			TransactionID: tx.TransactionUUID,
+			Signature:     signature,
 			TxHash:        req.TxHash,
 		}
 

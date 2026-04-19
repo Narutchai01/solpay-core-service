@@ -18,35 +18,63 @@ func (d Decimal2) MarshalJSON() ([]byte, error) {
 	return []byte(strconv.FormatFloat(float64(d), 'f', 2, 64)), nil
 }
 
+type TransactionOnChainDTO struct {
+	TxHash    string `json:"tx_hash"`
+	Signature string `json:"signature"`
+}
+
+type TransactionOffChainDTO struct {
+	PromptPayID string  `json:"prompt_pay_id"`
+	SlipURL     *string `json:"slip_url,omitempty"`
+}
+
 // TransactionDTO is the API representation of a transaction.
 type TransactionDTO struct {
-	ID              uint     `json:"id"`
-	TransactionUUID string   `json:"transaction_uuid"`
-	AccountID       uint     `json:"account_id"`
-	CategoryID      string   `json:"category_id"`
-	TransactionType string   `json:"transaction_type"`
-	Status          string   `json:"status"`
-	THBAmount       Decimal2 `json:"thb_amount"`
-	USDTAmount      float64  `json:"usdt_amount"`
-	Fee             float64  `json:"fee"`
-	CreatedAt       string   `json:"created_at"`
-	UpdatedAt       string   `json:"updated_at"`
+	ID                  uint                    `json:"id"`
+	TransactionUUID     string                  `json:"transaction_uuid"`
+	AccountID           uint                    `json:"account_id"`
+	TransactionType     string                  `json:"transaction_type"`
+	Status              string                  `json:"status"`
+	THBAmount           Decimal2                `json:"thb_amount"`
+	USDTAmount          float64                 `json:"usdt_amount"`
+	Fee                 float64                 `json:"fee"`
+	TransactionOnChain  *TransactionOnChainDTO  `json:"transaction_on_chain,omitempty"`
+	TransactionOffChain *TransactionOffChainDTO `json:"transaction_off_chain,omitempty"`
+	CreatedAt           string                  `json:"created_at"`
+	UpdatedAt           string                  `json:"updated_at"`
 }
 
 // FormatTransactionDTO converts a TransactionEntity to its API representation.
 func FormatTransactionDTO(transaction *entities.TransactionEntity) *TransactionDTO {
+	var onChain *TransactionOnChainDTO
+	if transaction.TransactionOnChain != nil {
+		onChain = &TransactionOnChainDTO{
+			TxHash:    transaction.TransactionOnChain.TxHash,
+			Signature: transaction.TransactionOnChain.Signature,
+		}
+	}
+
+	var offChain *TransactionOffChainDTO
+	if transaction.TransactionOffChain != nil {
+		offChain = &TransactionOffChainDTO{
+			PromptPayID: transaction.TransactionOffChain.PromptPayID,
+			SlipURL:     transaction.TransactionOffChain.SlipURL,
+		}
+	}
+
 	return &TransactionDTO{
-		ID:              transaction.ID,
-		TransactionUUID: transaction.TransactionUUID.String(),
-		AccountID:       transaction.AccountID,
-		CategoryID:      transaction.CategoryID,
-		TransactionType: transaction.TransactionType,
-		Status:          transaction.Status,
-		THBAmount:       NewDecimal2(transaction.THBAmount / 100),
-		USDTAmount:      transaction.USDTAmount,
-		Fee:             transaction.Fee,
-		CreatedAt:       transaction.CreatedAt.String(),
-		UpdatedAt:       transaction.UpdatedAt.String(),
+		ID:                  transaction.ID,
+		TransactionUUID:     transaction.TransactionUUID.String(),
+		AccountID:           transaction.AccountID,
+		TransactionType:     transaction.TransactionType,
+		Status:              transaction.Status,
+		THBAmount:           NewDecimal2(transaction.THBAmount / 100),
+		USDTAmount:          transaction.USDTAmount,
+		Fee:                 transaction.Fee,
+		TransactionOnChain:  onChain,
+		TransactionOffChain: offChain,
+		CreatedAt:           transaction.CreatedAt.String(),
+		UpdatedAt:           transaction.UpdatedAt.String(),
 	}
 }
 
