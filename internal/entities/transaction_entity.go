@@ -9,7 +9,7 @@ type TransactionEntity struct {
 	TransactionUUID uuid.UUID `json:"transaction_uuid" gorm:"primaryKey;not null;uniqueIndex;type:uuid"`
 	gorm.Model
 	AccountID           uint                 `json:"account_id" gorm:"not null;index"`
-	CategoryID          string               `json:"category_id" gorm:"default:null;"`
+	CategoryID          int                  `json:"category_id" gorm:"default:null;"`
 	TransactionType     string               `json:"transaction_type" gorm:"not null;index"`
 	Status              string               `json:"status" gorm:"not null;default:'pending'"`
 	THBAmount           float64              `json:"thb_amount" gorm:"not null;default:0"`
@@ -19,11 +19,13 @@ type TransactionEntity struct {
 	TransactionOffChain *TransactionOffChain `json:"transaction_off_chain,omitempty" gorm:"foreignKey:TransactionID;references:TransactionUUID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 
 	LogPayment *LogPayment `json:"log_payment,omitempty" gorm:"foreignKey:TransactionUUID;references:TransactionUUID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	Category   *Category   `json:"category,omitempty" gorm:"foreignKey:CategoryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 }
 
 type TransactionOnChain struct {
 	gorm.Model
 	TransactionID uuid.UUID          `json:"transaction_id" gorm:"type:uuid;not null;index"`
+	Signature     string             `json:"signature" gorm:"not null;"`
 	Transaction   *TransactionEntity `json:"transaction,omitempty" gorm:"foreignKey:TransactionID;references:TransactionUUID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	TxHash        string             `json:"tx_hash" gorm:"not null;uniqueIndex"`
 }
@@ -33,7 +35,7 @@ type TransactionOffChain struct {
 	TransactionID uuid.UUID          `json:"transaction_id" gorm:"type:uuid;not null;index"`
 	Transaction   *TransactionEntity `json:"transaction,omitempty" gorm:"foreignKey:TransactionID;references:TransactionUUID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	PromptPayID   string             `json:"prompt_pay_id" gorm:"not null;"`
-	SlipURL       *string            `json:"slip_url" default:"null" `
+	SlipURL       *string            `json:"slip_url" gorm:"default:null"`
 }
 
 type TransactionStatus string

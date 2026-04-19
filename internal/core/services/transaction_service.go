@@ -114,8 +114,12 @@ func (s *transactionService) createTransactionOnChain(ctx context.Context, req r
 	if req.TxHash == nil {
 		return errors.New("tx_hash is required for on-chain transactions")
 	}
+
+	signature := signatureFromTxHash(*req.TxHash)
+
 	return s.transactionRepo.CreateTransactionOnChain(ctx, &entities.TransactionOnChain{
 		TransactionID: txID,
+		Signature:     signature,
 		TxHash:        *req.TxHash,
 	})
 }

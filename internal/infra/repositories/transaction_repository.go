@@ -56,7 +56,10 @@ func (r *transactionRepository) GetTransactionByAccountID(accountID int) ([]enti
 
 func (r *transactionRepository) GetTransactionByID(transactionID int) (*entities.TransactionEntity, error) {
 	var transaction entities.TransactionEntity
-	if err := r.db.First(&transaction, transactionID).Error; err != nil {
+	if err := r.db.
+		Preload("TransactionOnChain").
+		Preload("TransactionOffChain").
+		First(&transaction, transactionID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, entities.ErrNotFound
 		}

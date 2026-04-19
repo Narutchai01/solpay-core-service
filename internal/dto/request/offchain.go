@@ -3,13 +3,16 @@ package request
 import "encoding/json"
 
 type OffChainRequest struct {
-	QuoteID string `json:"quote_id" validate:"required"`
+	CategoryID int    `json:"category_id" validate:"number default=1"`
+	QuoteID    string `json:"quote_id" validate:"required"`
 }
 
 func (r *OffChainRequest) UnmarshalJSON(data []byte) error {
 	type payload struct {
-		QuoteID      string `json:"quote_id"`
-		QuoteIDCamel string `json:"quoteID"`
+		QuoteID         string `json:"quote_id"`
+		QuoteIDCamel    string `json:"quoteID"`
+		CategoryID      *int   `json:"category_id"`
+		CategoryIDCamel *int   `json:"categoryID"`
 	}
 
 	var p payload
@@ -22,6 +25,17 @@ func (r *OffChainRequest) UnmarshalJSON(data []byte) error {
 	}
 
 	r.QuoteID = p.QuoteID
+
+	categoryID := p.CategoryID
+	if categoryID == nil {
+		categoryID = p.CategoryIDCamel
+	}
+
+	if categoryID == nil || *categoryID == 0 {
+		r.CategoryID = 1
+	} else {
+		r.CategoryID = *categoryID
+	}
 
 	return nil
 }
