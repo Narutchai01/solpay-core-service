@@ -71,6 +71,7 @@ func (s *OnchainServiceService) ComfirmOnchain(ctx context.Context, req request.
 		USDTAmount:      quote.USDTAmount,
 		Fee:             quote.Fee,
 	}
+	slipURL := "https://images.unsplash.com/photo-1776320644111-f72194d35eb8?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
 
 	result, err := s.uow.Execute(ctx, func(txCtx context.Context) (any, error) {
 		if err := s.transactionRepo.CreateTransaction(txCtx, tx); err != nil {
@@ -92,6 +93,7 @@ func (s *OnchainServiceService) ComfirmOnchain(ctx context.Context, req request.
 		txOffchain := &entities.TransactionOffChain{
 			TransactionID: tx.TransactionUUID,
 			PromptPayID:   *quote.PromptPayID,
+			SlipURL:       &slipURL,
 		}
 
 		if err := s.transactionRepo.CreateTransactionOnChain(txCtx, txOnChain); err != nil {
