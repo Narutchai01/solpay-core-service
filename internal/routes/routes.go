@@ -22,4 +22,5 @@ func RoutesConfig(app *fiber.App, db *gorm.DB, channel *amqp.Channel, cfg *confi
 	NewOffChainRouteConfig(v1.Group("/offchain"), db, channel).Setup()
 	NewOnchainRouteConfig(v1.Group("/onchain"), db, channel).Setup()
 	NewAdminRouteConfig(v1.Group("/admins"), db).Setup()
+	NewCategoryRouteConfig(v1.Group("/categories"), db).Setup()
 }

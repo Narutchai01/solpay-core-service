@@ -12,6 +12,7 @@ import (
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"gorm.io/gorm/logger"
 )
 
@@ -58,11 +59,34 @@ func ConnectDB() (*gorm.DB, error) {
 		&entities.LogPayment{},
 		&entities.Quote{},
 		&entities.AdminEntity{},
+		&entities.Category{},
 	); err != nil {
 		return nil, fmt.Errorf("auto-migrate: %w", err)
 	}
 
+	if err := seedCategories(db); err != nil {
+		return nil, err
+	}
+
 	return db, nil
+}
+
+func seedCategories(db *gorm.DB) error {
+	categories := []entities.Category{
+		{ID: 1, Name: "Others"},
+		{ID: 2, Name: "Food/Drink"},
+		{ID: 3, Name: "Shopping"},
+		{ID: 4, Name: "invest"},
+	}
+
+	if err := db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "id"}},
+		DoNothing: true,
+	}).Create(&categories).Error; err != nil {
+		return fmt.Errorf("seed categories: %w", err)
+	}
+
+	return nil
 }
 
 // NewTxContext stores the transaction in the context.
