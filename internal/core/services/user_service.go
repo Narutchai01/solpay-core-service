@@ -11,11 +11,13 @@ import (
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/response"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
+	"github.com/google/uuid"
 )
 
 const userFrontCardBucketName = "kyc"
 
 type UserService interface {
+	ApprovalStatus(req *request.ApprovalStatus) (*response.UserResponse, error)
 	CreateUser(req *request.CreateUserRequest) (*response.UserResponse, error)
 }
 
@@ -119,4 +121,38 @@ func sanitizeStorageSegment(value string) string {
 		return "unknown"
 	}
 	return cleaned
+}
+
+func (s *userService) ApprovalStatus(req *request.ApprovalStatus) (*response.UserResponse, error) {
+	user, err := s.userRepo.GetUserByIDCard(req.IDCard)
+	if err != nil {
+		return nil, err
+	}
+
+	user.Status = req.Status
+	if req.Status == string(entities.UserStatusApproved) && user.KYCToken == "" {
+		kycToken, err := uuid.NewV7()
+		if err != nil {
+			return nil, entities.NewAppError(entities.ErrTypeInternal, "failed to generate kyc token", err)
+		}
+		user.KYCToken = kycToken.String()
+	}
+
+	if err := s.userRepo.UpdateUser(user); err != nil {
+		return nil, err
+	}
+
+	dto := &response.UserResponse{
+		ID:           user.ID,
+		IDCard:       user.IDCard,
+		FirstName:    user.FirstName,
+		LastName:     user.LastName,
+		BirthDate:    user.BirthDate,
+		Status:       user.Status,
+		ExpireDate:   user.ExpireDate,
+		FrontCardURL: user.FrontCardURL,
+		BackCardURL:  user.BackCardURL,
+	}
+
+	return dto, nil
 }

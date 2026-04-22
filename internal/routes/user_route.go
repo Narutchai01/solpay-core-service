@@ -31,4 +31,5 @@ func (urc *UserRouteConfig) Setup() {
 	userHandler := handler.NewUserHandler(userService)
 
 	urc.route.Post("/", userHandler.CreateUserHandler)
+	urc.route.Patch("/approve", userHandler.ApproveUserHandler)
 }
