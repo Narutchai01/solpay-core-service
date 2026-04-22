@@ -11,3 +11,10 @@ type UserResponse struct {
 	FrontCardURL string `json:"front_card_url"`
 	BackCardURL  string `json:"back_card_url"`
 }
+
+type UserListResponse struct {
+	Rows       []*UserResponse `json:"rows"`
+	TotalCount int             `json:"total_count"`
+	Page       int             `json:"page"`
+	PageSize   int             `json:"page_size"`
+}

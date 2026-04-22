@@ -19,6 +19,7 @@ const userFrontCardBucketName = "kyc"
 type UserService interface {
 	ApprovalStatus(req *request.ApprovalStatus) (*response.UserResponse, error)
 	CreateUser(req *request.CreateUserRequest) (*response.UserResponse, error)
+	GetUsers(req request.UserQuery) (*response.UserListResponse, error)
 }
 
 type userService struct {
@@ -155,4 +156,48 @@ func (s *userService) ApprovalStatus(req *request.ApprovalStatus) (*response.Use
 	}
 
 	return dto, nil
+}
+
+func (s *userService) GetUsers(req request.UserQuery) (*response.UserListResponse, error) {
+	users, err := s.userRepo.GetUsers(req)
+	if err != nil {
+		return nil, err
+	}
+
+	totalCount, err := s.userRepo.CountUsers(req)
+	if err != nil {
+		return nil, err
+	}
+
+	page := req.Page
+	if page <= 0 {
+		page = 1
+	}
+
+	pageSize := req.PageSize
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+
+	var userResponses []*response.UserResponse
+	for _, user := range users {
+		userResponses = append(userResponses, &response.UserResponse{
+			ID:           user.ID,
+			IDCard:       user.IDCard,
+			FirstName:    user.FirstName,
+			LastName:     user.LastName,
+			BirthDate:    user.BirthDate,
+			Status:       user.Status,
+			ExpireDate:   user.ExpireDate,
+			FrontCardURL: user.FrontCardURL,
+			BackCardURL:  user.BackCardURL,
+		})
+	}
+
+	return &response.UserListResponse{
+		Rows:       userResponses,
+		TotalCount: totalCount,
+		Page:       page,
+		PageSize:   pageSize,
+	}, nil
 }
