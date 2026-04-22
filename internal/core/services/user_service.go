@@ -36,6 +36,10 @@ func (s *userService) CreateUser(req *request.CreateUserRequest) (*response.User
 		return nil, entities.NewAppError(entities.ErrTypeBadRequest, "front_card_image is required", entities.ErrBadRequest)
 	}
 
+	if req.BackCardImage == nil {
+		return nil, entities.NewAppError(entities.ErrTypeBadRequest, "back_card_image is required", entities.ErrBadRequest)
+	}
+
 	frontCardFile, err := req.FrontCardImage.Open()
 	if err != nil {
 		return nil, entities.NewAppError(entities.ErrTypeBadRequest, "failed to open front_card_image", err)
@@ -52,12 +56,28 @@ func (s *userService) CreateUser(req *request.CreateUserRequest) (*response.User
 		return nil, entities.NewAppError(entities.ErrTypeInternal, "failed to upload front_card_image", err)
 	}
 
+	backCardFile, err := req.BackCardImage.Open()
+	if err != nil {
+		return nil, entities.NewAppError(entities.ErrTypeBadRequest, "failed to open back_card_image", err)
+	}
+	defer backCardFile.Close()
+
+	backCardBytes, err := io.ReadAll(backCardFile)
+	if err != nil {
+		return nil, entities.NewAppError(entities.ErrTypeInternal, "failed to read back_card_image", err)
+	}
+
+	backCardURL, err := s.storage.UploadFile(userFrontCardBucketName, buildFrontCardObjectPath(req.IDCard, req.BackCardImage.Filename), backCardBytes)
+	if err != nil {
+		return nil, entities.NewAppError(entities.ErrTypeInternal, "failed to upload back_card_image", err)
+	}
+
 	user := &entities.User{
 		IDCard:       req.IDCard,
 		FirstName:    req.FirstName,
 		LastName:     req.LastName,
 		FrontCardURL: frontCardURL,
-		BackCardURL:  "dasdasd",
+		BackCardURL:  backCardURL,
 		BirthDate:    req.BirthDate,
 		Status:       string(entities.UserStatusPending),
 		ExpireDate:   req.ExpireDate,
@@ -89,7 +109,7 @@ func buildFrontCardObjectPath(idCard, filename string) string {
 		ext = ".img"
 	}
 
-	return fmt.Sprintf("users/%s/front_card_%d%s", cleanIDCard, time.Now().UnixNano(), ext)
+	return fmt.Sprintf("users/%s/%d%s", cleanIDCard, time.Now().UnixNano(), ext)
 }
 
 func sanitizeStorageSegment(value string) string {

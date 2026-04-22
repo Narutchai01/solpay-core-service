@@ -9,4 +9,5 @@ type CreateUserRequest struct {
 	BirthDate      string                `json:"birth_date" form:"birth_date" validate:"required" binding:"required"`
 	ExpireDate     string                `json:"expire_date" form:"expire_date" validate:"required" binding:"required"`
 	FrontCardImage *multipart.FileHeader `json:"-" form:"front_card_image" validate:"required"`
+	BackCardImage  *multipart.FileHeader `json:"-" form:"back_card_image" validate:"required"`
 }
