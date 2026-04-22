@@ -30,6 +30,7 @@ func (urc *UserRouteConfig) Setup() {
 	userService := services.NewUserService(userRepo, storage)
 	userHandler := handler.NewUserHandler(userService)
 
+	urc.route.Get("/", userHandler.GetUsersHandler)
 	urc.route.Post("/", userHandler.CreateUserHandler)
 	urc.route.Patch("/approve", userHandler.ApproveUserHandler)
 }

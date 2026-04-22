@@ -16,6 +16,7 @@ import (
 type UserHandler interface {
 	CreateUserHandler(c *fiber.Ctx) error
 	ApproveUserHandler(c *fiber.Ctx) error
+	GetUsersHandler(c *fiber.Ctx) error
 }
 
 type userHandler struct {
@@ -93,4 +94,18 @@ func (h *userHandler) ApproveUserHandler(c *fiber.Ctx) error {
 	}
 
 	return utils.HandleResponse(c, user, nil)
+}
+
+func (h *userHandler) GetUsersHandler(c *fiber.Ctx) error {
+	var req request.UserQuery
+	if err := c.QueryParser(&req); err != nil {
+		return utils.HandleResponse(c, nil, entities.NewAppError(entities.ErrTypeBadRequest, "invalid query parameters", err))
+	}
+
+	users, err := h.userService.GetUsers(req)
+	if err != nil {
+		return utils.HandleResponse(c, nil, err)
+	}
+
+	return utils.HandleResponse(c, users, nil)
 }
