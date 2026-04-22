@@ -15,6 +15,7 @@ import (
 
 type UserHandler interface {
 	CreateUserHandler(c *fiber.Ctx) error
+	ApproveUserHandler(c *fiber.Ctx) error
 }
 
 type userHandler struct {
@@ -73,4 +74,23 @@ func (h *userHandler) CreateUserHandler(c *fiber.Ctx) error {
 
 	return utils.HandleResponse(c, user, nil)
 
+}
+
+func (h *userHandler) ApproveUserHandler(c *fiber.Ctx) error {
+	var req request.ApprovalStatus
+	if err := c.BodyParser(&req); err != nil {
+		return utils.HandleResponse(c, nil, entities.NewAppError(entities.ErrTypeBadRequest, "invalid request body", err))
+	}
+
+	if err := h.validate.Struct(&req); err != nil {
+		msg := utils.FormatValidationError(err)
+		return utils.HandleResponse(c, nil, entities.NewAppError(entities.ErrTypeBadRequest, msg, err))
+	}
+
+	user, err := h.userService.ApprovalStatus(&req)
+	if err != nil {
+		return utils.HandleResponse(c, nil, err)
+	}
+
+	return utils.HandleResponse(c, user, nil)
 }

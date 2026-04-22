@@ -11,3 +11,8 @@ type CreateUserRequest struct {
 	FrontCardImage *multipart.FileHeader `json:"-" form:"front_card_image" validate:"required"`
 	BackCardImage  *multipart.FileHeader `json:"-" form:"back_card_image" validate:"required"`
 }
+
+type ApprovalStatus struct {
+	IDCard string `json:"id_card" form:"id_card" validate:"required" binding:"required"`
+	Status string `json:"status" form:"status" validate:"required,oneof=APPROVED REJECTED PENDING" binding:"required"`
+}
