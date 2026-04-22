@@ -29,6 +29,8 @@ type Config struct {
 	MINT_TOKEN_ADDRESS             string
 	RECEIVE_ADDRESS                string
 	RPC_URL                        string
+	SUPABASE_PRIVATE_KEY           string
+	SUPABASE_URL                   string
 }
 
 func GetEnv(key string, fallback ...string) string {
@@ -69,5 +71,7 @@ func LoadConfig() *Config {
 		MINT_TOKEN_ADDRESS:             GetEnv("MINT_TOKEN_ADDRESS"),
 		RECEIVE_ADDRESS:                GetEnv("RECEIVE_ADDRESS"),
 		RPC_URL:                        GetEnv("RPC_URL", "https://api.devnet.solana.com"),
+		SUPABASE_PRIVATE_KEY:           GetEnv("SUPABASE_PRIVATE_KEY"),
+		SUPABASE_URL:                   GetEnv("SUPABASE_URL"),
 	}
 }

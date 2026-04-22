@@ -60,6 +60,7 @@ func ConnectDB() (*gorm.DB, error) {
 		&entities.Quote{},
 		&entities.AdminEntity{},
 		&entities.Category{},
+		&entities.User{},
 	); err != nil {
 		return nil, fmt.Errorf("auto-migrate: %w", err)
 	}
