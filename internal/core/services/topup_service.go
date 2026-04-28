@@ -63,9 +63,15 @@ func (s *topUpService) ComfirmTopUp(ctx context.Context, req request.TopUpReques
 		return entities.TransactionEntity{}, fmt.Errorf("generate UUID: %w", err)
 	}
 
+	categoryID := req.CategoryID
+	if categoryID == 0 {
+		categoryID = 1
+	}
+
 	tx := &entities.TransactionEntity{
 		TransactionUUID: txUUID,
 		AccountID:       accountID,
+		CategoryID:      categoryID,
 		TransactionType: string(entities.TOPUP),
 		THBAmount:       float64(quote.THBAmount),
 		USDTAmount:      quote.USDTAmount,

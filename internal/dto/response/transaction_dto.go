@@ -35,6 +35,7 @@ type TransactionDTO struct {
 	AccountID           uint                    `json:"account_id"`
 	TransactionType     string                  `json:"transaction_type"`
 	Status              string                  `json:"status"`
+	Category            *entities.Category      `json:"category"`
 	THBAmount           Decimal2                `json:"thb_amount"`
 	USDTAmount          float64                 `json:"usdt_amount"`
 	Fee                 float64                 `json:"fee"`
@@ -68,6 +69,7 @@ func FormatTransactionDTO(transaction *entities.TransactionEntity) *TransactionD
 		AccountID:           transaction.AccountID,
 		TransactionType:     transaction.TransactionType,
 		Status:              transaction.Status,
+		Category:            transaction.Category,
 		THBAmount:           NewDecimal2(transaction.THBAmount / 100),
 		USDTAmount:          transaction.USDTAmount,
 		Fee:                 transaction.Fee,

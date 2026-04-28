@@ -26,4 +26,5 @@ func (crc *CategoryRouteConfig) Setup() {
 	categoryHandler := handler.NewCategoryHandler(categoryService)
 
 	crc.route.Get("/", categoryHandler.GetCategoriesHandler)
+	crc.route.Get("/:id", categoryHandler.GetCategoryHandler)
 }

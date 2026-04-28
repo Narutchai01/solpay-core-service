@@ -21,3 +21,11 @@ func (r *categoryRepository) GetCategories() ([]entities.Category, error) {
 	}
 	return categories, nil
 }
+
+func (r *categoryRepository) GetCategory(id int) (*entities.Category, error) {
+	var category entities.Category
+	if err := r.db.First(&category, id).Error; err != nil {
+		return nil, err
+	}
+	return &category, nil
+}

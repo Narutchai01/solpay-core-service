@@ -6,6 +6,7 @@ type TopUpRequest struct {
 	QuoteID     string   `json:"quote_id" validate:"required"`
 	TxHash      string   `json:"tx_hash" validate:"required"`
 	MaxSlippage *float64 `json:"max_slippage,omitempty"`
+	CategoryID  int      `json:"category_id,omitempty"`
 }
 
 // DefaultSlippage is the default value for MaxSlippage if not provided.
@@ -20,12 +21,14 @@ func (r *TopUpRequest) SetDefaultSlippage() {
 
 func (r *TopUpRequest) UnmarshalJSON(data []byte) error {
 	type payload struct {
-		QuoteID      string   `json:"quote_id"`
-		QuoteIDCamel string   `json:"quoteID"`
-		TxHash       string   `json:"tx_hash"`
-		TxHashCamel  string   `json:"txHash"`
-		MaxSlippage  *float64 `json:"max_slippage"`
-		MaxSlipCamel *float64 `json:"maxSlippage"`
+		QuoteID         string   `json:"quote_id"`
+		QuoteIDCamel    string   `json:"quoteID"`
+		TxHash          string   `json:"tx_hash"`
+		TxHashCamel     string   `json:"txHash"`
+		MaxSlippage     *float64 `json:"max_slippage"`
+		MaxSlipCamel    *float64 `json:"maxSlippage"`
+		CategoryID      *int     `json:"category_id"`
+		CategoryIDCamel *int     `json:"categoryID"`
 	}
 
 	var p payload
@@ -43,9 +46,19 @@ func (r *TopUpRequest) UnmarshalJSON(data []byte) error {
 		p.MaxSlippage = p.MaxSlipCamel
 	}
 
+	categoryID := p.CategoryID
+	if categoryID == nil {
+		categoryID = p.CategoryIDCamel
+	}
+
 	r.QuoteID = p.QuoteID
 	r.TxHash = p.TxHash
 	r.MaxSlippage = p.MaxSlippage
+	if categoryID == nil || *categoryID == 0 {
+		r.CategoryID = 1
+	} else {
+		r.CategoryID = *categoryID
+	}
 
 	return nil
 }
