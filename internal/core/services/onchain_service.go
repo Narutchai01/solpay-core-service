@@ -63,11 +63,19 @@ func (s *OnchainServiceService) ComfirmOnchain(ctx context.Context, req request.
 		return entities.TransactionEntity{}, fmt.Errorf("generate UUID: %w", err)
 	}
 
+	fmt.Printf("CategoryID in service: %d\n", req.CategoryID)
+
+	categoryID := req.CategoryID
+	if categoryID == 0 {
+		categoryID = 1
+	}
+
 	tx := &entities.TransactionEntity{
 		TransactionUUID: txUUID,
 		AccountID:       accountID,
 		TransactionType: quote.Type,
 		THBAmount:       float64(quote.THBAmount),
+		CategoryID:      categoryID,
 		USDTAmount:      quote.USDTAmount,
 		Fee:             quote.Fee,
 	}
@@ -111,6 +119,11 @@ func (s *OnchainServiceService) ComfirmOnchain(ctx context.Context, req request.
 	}
 
 	tx = result.(*entities.TransactionEntity)
+	loadedTx, err := s.transactionRepo.GetTransactionByUUID(tx.TransactionUUID)
+	if err != nil {
+		return entities.TransactionEntity{}, fmt.Errorf("get transaction by uuid: %w", err)
+	}
+	tx = loadedTx
 
 	s.publisher.PublishTransactionMessage(cfg.TRANSACTION_ORCHESTRATOR_QUEUE, tx, string(entities.StatusSolanaSubmitted))
 

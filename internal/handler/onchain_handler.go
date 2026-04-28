@@ -30,6 +30,10 @@ func (h *onchainHandler) ConfirmOnchainHandler(c *fiber.Ctx) error {
 		})
 	}
 
+	if req.CategoryID == 0 {
+		req.CategoryID = 1
+	}
+
 	accountID, ok := utils.GetUserIDFromLocals(c)
 	if !ok {
 		return utils.HandleResponse(c, nil, fiber.NewError(fiber.StatusUnauthorized, "unauthorized"))
