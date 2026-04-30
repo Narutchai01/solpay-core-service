@@ -92,14 +92,14 @@ func (r *transactionRepository) GetTransactionByUUID(txUUID uuid.UUID) (*entitie
 func (r *transactionRepository) CountTransactions(query request.TransactionQuery, accountID *uint) (int64, error) {
 	var total int64
 
-	q := r.db.Model(&entities.TransactionEntity{})
+	q := r.db.Model(&entities.TransactionEntity{}).Where("status = ?", entities.StatusCompleted)
 
 	if accountID != nil {
 		q = q.Where("account_id = ?", *accountID)
 	}
 
-	if query.TxType != "" {
-		q = q.Where("transaction_type = ?", query.TxType)
+	if len(query.TxType) > 0 {
+		q = q.Where("transaction_type IN ?", query.TxType)
 	}
 
 	err := q.Count(&total).Error
@@ -110,14 +110,14 @@ func (r *transactionRepository) CountTransactions(query request.TransactionQuery
 func (r *transactionRepository) GetTransactions(query request.TransactionQuery, accountID *uint) ([]entities.TransactionEntity, error) {
 	var transactions []entities.TransactionEntity
 
-	q := r.db.Model(&entities.TransactionEntity{})
+	q := r.db.Model(&entities.TransactionEntity{}).Where("status = ?", entities.StatusCompleted)
 
 	if accountID != nil {
 		q = q.Where("account_id = ?", *accountID)
 	}
 
-	if query.TxType != "" {
-		q = q.Where("transaction_type = ?", query.TxType)
+	if len(query.TxType) > 0 {
+		q = q.Where("transaction_type IN ?", query.TxType)
 	}
 
 	err := q.Order("created_at DESC").
