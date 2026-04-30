@@ -20,9 +20,9 @@ type TransactionMessage struct {
 }
 
 type TransactionQuery struct {
-	Page     int    `query:"page"`
-	PageSize int    `query:"pageSize"`
-	TxType   string `query:"txType"`
+	Page     int      `query:"page"`
+	PageSize int      `query:"pageSize"`
+	TxType   []string `query:"txType"`
 }
 
 func (q *TransactionQuery) GetOffset() int {
