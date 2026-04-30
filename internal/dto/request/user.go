@@ -10,6 +10,7 @@ type CreateUserRequest struct {
 	ExpireDate     string                `json:"expire_date" form:"expire_date" validate:"required" binding:"required"`
 	FrontCardImage *multipart.FileHeader `json:"-" form:"front_card_image" validate:"required"`
 	BackCardImage  *multipart.FileHeader `json:"-" form:"back_card_image" validate:"required"`
+	FaceImage      *multipart.FileHeader `json:"-" form:"face_image" validate:"required"`
 }
 
 type ApprovalStatus struct {

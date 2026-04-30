@@ -10,6 +10,7 @@ type User struct {
 	BirthDate    string `json:"birth_date" gorm:"not null"`
 	Status       string `json:"status" gorm:"not null default:'PENDING'" `
 	ExpireDate   string `json:"expire_date" gorm:"not null"`
+	FaceURL      string `json:"face_url" gorm:"not null"`
 	FrontCardURL string `json:"front_card_url" gorm:"not null"`
 	BackCardURL  string `json:"back_card_url" gorm:"not null"`
 	KYCToken     string `json:"kyc_token" gorm:"not null"`
