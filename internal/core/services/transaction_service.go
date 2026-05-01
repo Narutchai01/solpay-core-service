@@ -32,6 +32,8 @@ type TransactionService interface {
 	QueryTransactionSummary(ctx context.Context, month, year int) (*response.TransactionChartSummary, error)
 	HandleTransactionUpdate(ctx context.Context, msg []byte) error
 	GetTransactions(query request.TransactionQuery, accountID *uint) ([]entities.TransactionEntity, int64, error)
+	GetSpendingSummary(ctx context.Context, accountID uint) (*response.OverallSpendingSummaryDTO, error)
+	GetMonthlySpendingSummary(ctx context.Context, accountID uint) ([]response.MonthlySpendingDTO, error)
 }
 
 type transactionService struct {
@@ -454,4 +456,80 @@ func (s *transactionService) QueryTransactionSummary(ctx context.Context, month,
 		TotalCompletedCount: totalCompletedCount,
 		ChartData:           chartData,
 	}, nil
+}
+
+func (s *transactionService) GetSpendingSummary(ctx context.Context, accountID uint) (*response.OverallSpendingSummaryDTO, error) {
+	now := time.Now()
+	month := int(now.Month())
+	year := now.Year()
+
+	categorySummaries, err := s.transactionRepo.GetSpendingSummary(ctx, accountID, month, year)
+	if err != nil {
+		return nil, entities.NewAppError(entities.ErrTypeInternal, "failed to get spending summary", err)
+	}
+
+	var totalSpentCurrentMonth float64
+	for _, cs := range categorySummaries {
+		totalSpentCurrentMonth += cs.TotalSpent
+	}
+
+	categoryDtos := make([]response.SpendingSummaryDTO, 0, len(categorySummaries))
+	for _, cs := range categorySummaries {
+		name := cs.CategoryName
+		if name == "" {
+			name = "Uncategorized"
+		}
+
+		var percentage float64
+		if totalSpentCurrentMonth > 0 {
+			percentage = (cs.TotalSpent / totalSpentCurrentMonth) * 100
+		}
+
+		categoryDtos = append(categoryDtos, response.SpendingSummaryDTO{
+			CategoryName: name,
+			TotalSpent:   response.NewDecimal2(percentage),
+		})
+	}
+
+	monthlySummaries, err := s.transactionRepo.GetMonthlySpendingSummary(ctx, accountID, 6)
+	if err != nil {
+		return nil, entities.NewAppError(entities.ErrTypeInternal, "failed to get monthly spending summary", err)
+	}
+
+	return &response.OverallSpendingSummaryDTO{
+		ByCategory: categoryDtos,
+		ByMonth:    s.fillMonthlySpendingGaps(now, monthlySummaries, 6),
+	}, nil
+}
+
+func (s *transactionService) GetMonthlySpendingSummary(ctx context.Context, accountID uint) ([]response.MonthlySpendingDTO, error) {
+	now := time.Now()
+	summaries, err := s.transactionRepo.GetMonthlySpendingSummary(ctx, accountID, 6)
+	if err != nil {
+		return nil, entities.NewAppError(entities.ErrTypeInternal, "failed to get monthly spending summary", err)
+	}
+
+	return s.fillMonthlySpendingGaps(now, summaries, 6), nil
+}
+
+func (s *transactionService) fillMonthlySpendingGaps(now time.Time, summaries []entities.MonthlySpending, count int) []response.MonthlySpendingDTO {
+	indexedMonthly := make(map[string]float64)
+	for _, ms := range summaries {
+		indexedMonthly[ms.Month] = ms.TotalSpent
+	}
+
+	dtos := make([]response.MonthlySpendingDTO, 0, count)
+	for i := 0; i < count; i++ {
+		// Use first day of month to avoid issues with varying month lengths
+		date := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location()).AddDate(0, -i, 0)
+		monthLabel := date.Format("2006-01")
+
+		totalSpent := indexedMonthly[monthLabel]
+
+		dtos = append(dtos, response.MonthlySpendingDTO{
+			Month:      monthLabel,
+			TotalSpent: response.NewDecimal2(satangToTHB(totalSpent)),
+		})
+	}
+	return dtos
 }

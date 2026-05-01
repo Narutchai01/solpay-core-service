@@ -20,6 +20,8 @@ type TransactionHandler interface {
 	GetTransactionsHandler(c *fiber.Ctx) error
 	QueryTransactionSummaryHandler(c *fiber.Ctx) error
 	GetTransactionsByAccountIDHandler(c *fiber.Ctx) error
+	GetSpendingSummaryHandler(c *fiber.Ctx) error
+	GetMonthlySpendingSummaryHandler(c *fiber.Ctx) error
 }
 
 type transactionHandler struct {
@@ -149,4 +151,32 @@ func (h *transactionHandler) GetTransactionsByAccountIDHandler(c *fiber.Ctx) err
 		"page":     q.Page,
 		"pageSize": q.PageSize,
 	}, nil)
+}
+
+func (h *transactionHandler) GetSpendingSummaryHandler(c *fiber.Ctx) error {
+	accountID, ok := utils.GetUserIDFromLocals(c)
+	if !ok {
+		return utils.HandleResponse(c, nil, fiber.NewError(fiber.StatusUnauthorized, "unauthorized"))
+	}
+
+	summary, err := h.transactionService.GetSpendingSummary(c.UserContext(), accountID)
+	if err != nil {
+		return utils.HandleResponse(c, nil, err)
+	}
+
+	return utils.HandleResponse(c, summary, nil)
+}
+
+func (h *transactionHandler) GetMonthlySpendingSummaryHandler(c *fiber.Ctx) error {
+	accountID, ok := utils.GetUserIDFromLocals(c)
+	if !ok {
+		return utils.HandleResponse(c, nil, fiber.NewError(fiber.StatusUnauthorized, "unauthorized"))
+	}
+
+	summary, err := h.transactionService.GetMonthlySpendingSummary(c.UserContext(), accountID)
+	if err != nil {
+		return utils.HandleResponse(c, nil, err)
+	}
+
+	return utils.HandleResponse(c, summary, nil)
 }
