@@ -82,3 +82,13 @@ type TransactionSummary struct {
 	TotalFee        float64 `json:"total_fee"`
 	TotalCount      int     `json:"total_count"`
 }
+
+type SpendingSummary struct {
+	CategoryName string  `json:"category_name"`
+	TotalSpent   float64 `json:"total_spent"`
+}
+
+type MonthlySpending struct {
+	Month      string  `json:"month"`
+	TotalSpent float64 `json:"total_spent"`
+}

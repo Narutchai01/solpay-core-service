@@ -104,3 +104,18 @@ type TransactionChartSummary struct {
 	TotalCompletedCount int                    `json:"totalCompletedCount"`
 	ChartData           []TransactionChartData `json:"chartData"`
 }
+
+type SpendingSummaryDTO struct {
+	CategoryName string   `json:"category_name"`
+	TotalSpent   Decimal2 `json:"total_spent"`
+}
+
+type MonthlySpendingDTO struct {
+	Month      string   `json:"month"`
+	TotalSpent Decimal2 `json:"total_spent"`
+}
+
+type OverallSpendingSummaryDTO struct {
+	ByCategory []SpendingSummaryDTO `json:"by_category"`
+	ByMonth    []MonthlySpendingDTO `json:"by_month"`
+}

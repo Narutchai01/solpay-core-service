@@ -19,4 +19,6 @@ type TransactionRepository interface {
 	CountTransactions(query request.TransactionQuery, accountID *uint) (int64, error)
 	GetTransactions(query request.TransactionQuery, accountID *uint) ([]entities.TransactionEntity, error)
 	QueryTransactionSummary(txCtx context.Context, month, year int) ([]entities.TransactionSummary, error)
+	GetSpendingSummary(ctx context.Context, accountID uint, month, year int) ([]entities.SpendingSummary, error)
+	GetMonthlySpendingSummary(ctx context.Context, accountID uint, limit int) ([]entities.MonthlySpending, error)
 }

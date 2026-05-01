@@ -175,3 +175,41 @@ func (r *transactionRepository) QueryTransactionSummary(txCtx context.Context, m
 
 	return summaries, nil
 }
+
+func (r *transactionRepository) GetSpendingSummary(ctx context.Context, accountID uint, month, year int) ([]entities.SpendingSummary, error) {
+	var summaries []entities.SpendingSummary
+
+	err := r.db.Table("transaction_entities").
+		Select("categories.name as category_name, SUM(transaction_entities.thb_amount) as total_spent").
+		Joins("left join categories on transaction_entities.category_id = categories.id").
+		Where("transaction_entities.account_id = ?", accountID).
+		Where("transaction_entities.status = ?", string(entities.StatusCompleted)).
+		Where("transaction_entities.transaction_type IN ?", []string{string(entities.OFFCHAIN), string(entities.ONCHAIN)}).
+		Where("EXTRACT(MONTH FROM transaction_entities.created_at) = ?", month).
+		Where("EXTRACT(YEAR FROM transaction_entities.created_at) = ?", year).
+		Group("categories.name").
+		Scan(&summaries).Error
+
+	return summaries, err
+}
+
+func (r *transactionRepository) GetMonthlySpendingSummary(ctx context.Context, accountID uint, limit int) ([]entities.MonthlySpending, error) {
+	var summaries []entities.MonthlySpending
+
+	err := r.db.Raw(`
+		SELECT
+			TO_CHAR(created_at, 'YYYY-MM') AS month,
+			COALESCE(SUM(thb_amount), 0) AS total_spent
+		FROM transaction_entities
+		WHERE
+			account_id = ?
+			AND deleted_at IS NULL
+			AND status = 'COMPLETED'
+			AND transaction_type IN ('OFFCHAIN', 'ONCHAIN')
+		GROUP BY month
+		ORDER BY month DESC
+		LIMIT ?
+	`, accountID, limit).Scan(&summaries).Error
+
+	return summaries, err
+}
