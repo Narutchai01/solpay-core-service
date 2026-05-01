@@ -34,6 +34,7 @@ func NewUserHandler(userService services.UserService) UserHandler {
 func (h *userHandler) CreateUserHandler(c *fiber.Ctx) error {
 	frontCardImage, _ := c.FormFile("front_card_image")
 	backCardImage, _ := c.FormFile("back_card_image")
+	faceImage, _ := c.FormFile("face_image")
 
 	req := request.CreateUserRequest{
 		IDCard:         c.FormValue("id_card"),
@@ -43,6 +44,7 @@ func (h *userHandler) CreateUserHandler(c *fiber.Ctx) error {
 		ExpireDate:     c.FormValue("expire_date"),
 		FrontCardImage: frontCardImage,
 		BackCardImage:  backCardImage,
+		FaceImage:      faceImage,
 	}
 
 	if err := h.validate.Struct(&req); err != nil {
@@ -66,6 +68,15 @@ func (h *userHandler) CreateUserHandler(c *fiber.Ctx) error {
 
 	if !strings.HasPrefix(contentType, "image/") {
 		return utils.HandleResponse(c, nil, entities.NewAppError(entities.ErrTypeBadRequest, "back_card_image must be an image", entities.ErrBadRequest))
+	}
+
+	contentType = req.FaceImage.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = mime.TypeByExtension(filepath.Ext(req.FaceImage.Filename))
+	}
+
+	if !strings.HasPrefix(contentType, "image/") {
+		return utils.HandleResponse(c, nil, entities.NewAppError(entities.ErrTypeBadRequest, "face_image must be an image", entities.ErrBadRequest))
 	}
 
 	user, err := h.userService.CreateUser(&req)

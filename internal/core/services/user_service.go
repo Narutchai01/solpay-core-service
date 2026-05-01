@@ -43,6 +43,10 @@ func (s *userService) CreateUser(req *request.CreateUserRequest) (*response.User
 		return nil, entities.NewAppError(entities.ErrTypeBadRequest, "back_card_image is required", entities.ErrBadRequest)
 	}
 
+	if req.FaceImage == nil {
+		return nil, entities.NewAppError(entities.ErrTypeBadRequest, "face_image is required", entities.ErrBadRequest)
+	}
+
 	frontCardFile, err := req.FrontCardImage.Open()
 	if err != nil {
 		return nil, entities.NewAppError(entities.ErrTypeBadRequest, "failed to open front_card_image", err)
@@ -75,12 +79,29 @@ func (s *userService) CreateUser(req *request.CreateUserRequest) (*response.User
 		return nil, entities.NewAppError(entities.ErrTypeInternal, "failed to upload back_card_image", err)
 	}
 
+	faceCardFile, err := req.FaceImage.Open()
+	if err != nil {
+		return nil, entities.NewAppError(entities.ErrTypeBadRequest, "failed to open face_image", err)
+	}
+	defer faceCardFile.Close()
+
+	faceCardBytes, err := io.ReadAll(faceCardFile)
+	if err != nil {
+		return nil, entities.NewAppError(entities.ErrTypeInternal, "failed to read face_image", err)
+	}
+
+	faceCardURL, err := s.storage.UploadFile(userFrontCardBucketName, buildFrontCardObjectPath(req.IDCard, req.FaceImage.Filename), faceCardBytes)
+	if err != nil {
+		return nil, entities.NewAppError(entities.ErrTypeInternal, "failed to upload face_image", err)
+	}
+
 	user := &entities.User{
 		IDCard:       req.IDCard,
 		FirstName:    req.FirstName,
 		LastName:     req.LastName,
 		FrontCardURL: frontCardURL,
 		BackCardURL:  backCardURL,
+		FaceURL:      faceCardURL,
 		BirthDate:    req.BirthDate,
 		Status:       string(entities.UserStatusPending),
 		ExpireDate:   req.ExpireDate,
@@ -100,6 +121,7 @@ func (s *userService) CreateUser(req *request.CreateUserRequest) (*response.User
 		ExpireDate:   user.ExpireDate,
 		FrontCardURL: user.FrontCardURL,
 		BackCardURL:  user.BackCardURL,
+		FaceURL:      user.FaceURL,
 	}
 
 	return dto, nil
@@ -153,6 +175,7 @@ func (s *userService) ApprovalStatus(req *request.ApprovalStatus) (*response.Use
 		ExpireDate:   user.ExpireDate,
 		FrontCardURL: user.FrontCardURL,
 		BackCardURL:  user.BackCardURL,
+		FaceURL:      user.FaceURL,
 	}
 
 	return dto, nil
@@ -191,6 +214,7 @@ func (s *userService) GetUsers(req request.UserQuery) (*response.UserListRespons
 			ExpireDate:   user.ExpireDate,
 			FrontCardURL: user.FrontCardURL,
 			BackCardURL:  user.BackCardURL,
+			FaceURL:      user.FaceURL,
 		})
 	}
 

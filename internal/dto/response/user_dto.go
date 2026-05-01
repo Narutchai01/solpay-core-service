@@ -8,6 +8,7 @@ type UserResponse struct {
 	BirthDate    string `json:"birth_date"`
 	Status       string `json:"status"`
 	ExpireDate   string `json:"expire_date"`
+	FaceURL      string `json:"face_url"`
 	FrontCardURL string `json:"front_card_url"`
 	BackCardURL  string `json:"back_card_url"`
 }
