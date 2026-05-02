@@ -26,3 +26,15 @@ type SwapAmountDetails struct {
 	RawAmount     string `json:"rawAmount"`
 	DecimalAmount string `json:"decimalAmount"`
 }
+
+type SwapUnsignedTransactionFullResponse struct {
+	Status string                      `json:"status"`
+	Data   SwapUnsignedTransactionData `json:"data"`
+}
+
+type SwapUnsignedTransactionData struct {
+	TxID                 string `json:"txId"`
+	Transaction          string `json:"transaction"`
+	Blockhash            string `json:"blockhash"`
+	LastValidBlockHeight int64  `json:"lastValidBlockHeight"`
+}

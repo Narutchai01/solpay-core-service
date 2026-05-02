@@ -10,6 +10,7 @@ import (
 
 type SwapHandler interface {
 	GetSwapQuote(c *fiber.Ctx) error
+	BuildSwapUnsignedTransaction(c *fiber.Ctx) error
 }
 
 type swapHandler struct {
@@ -32,4 +33,25 @@ func (h *swapHandler) GetSwapQuote(c *fiber.Ctx) error {
 	}
 
 	return utils.HandleResponse(c, resp, nil, "get swap quote successfully")
+}
+
+func (h *swapHandler) BuildSwapUnsignedTransaction(c *fiber.Ctx) error {
+	userID, ok := utils.GetUserIDFromLocals(c)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid user context",
+		})
+	}
+
+	var req request.SwapUnsignedTransactionRequest
+	if err := c.BodyParser(&req); err != nil {
+		return utils.HandleResponse(c, nil, entities.NewAppError(entities.ErrTypeBadRequest, "invalid request body", err))
+	}
+
+	resp, err := h.service.BuildSwapUnsignedTransaction(req, userID)
+	if err != nil {
+		return utils.HandleResponse(c, nil, err)
+	}
+
+	return utils.HandleResponse(c, resp, nil, "build swap unsigned transaction successfully")
 }
