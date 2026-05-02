@@ -8,7 +8,7 @@ import (
 
 type SwapService interface {
 	GetSwapQuote(query request.SwapQuoteRequest) (response.SwapQuoteData, error)
-	BuildSwapUnsignedTransaction(req request.SwapUnsignedTransactionRequest, userID uint) (string, error)
+	BuildSwapUnsignedTransaction(req request.SwapUnsignedTransactionRequest, userID uint) (response.BuildSwapTransactionResponse, error)
 }
 
 type swapService struct {
@@ -31,15 +31,17 @@ func (s *swapService) GetSwapQuote(query request.SwapQuoteRequest) (response.Swa
 	return resp.Data, nil
 }
 
-func (s *swapService) BuildSwapUnsignedTransaction(req request.SwapUnsignedTransactionRequest, userID uint) (string, error) {
+func (s *swapService) BuildSwapUnsignedTransaction(req request.SwapUnsignedTransactionRequest, userID uint) (response.BuildSwapTransactionResponse, error) {
 	account, err := s.accountRepo.GetAccountByID(int(userID))
 	if err != nil {
-		return "", err
+		return response.BuildSwapTransactionResponse{}, err
 	}
 
 	resp, err := s.repo.BuildSwapUnsignedTransaction(req, account.PublicAddress)
 	if err != nil {
-		return "", err
+		return response.BuildSwapTransactionResponse{}, err
 	}
-	return resp.Data.Transaction, nil
+	return response.BuildSwapTransactionResponse{
+		Transaction: resp.Data.Transaction,
+	}, nil
 }

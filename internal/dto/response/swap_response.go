@@ -38,3 +38,7 @@ type SwapUnsignedTransactionData struct {
 	Blockhash            string `json:"blockhash"`
 	LastValidBlockHeight int64  `json:"lastValidBlockHeight"`
 }
+
+type BuildSwapTransactionResponse struct {
+	Transaction string `json:"transaction"`
+}
