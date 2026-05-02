@@ -31,6 +31,7 @@ type Config struct {
 	RPC_URL                        string
 	SUPABASE_PRIVATE_KEY           string
 	SUPABASE_URL                   string
+	SWAP_SERVICE_URL               string
 }
 
 func GetEnv(key string, fallback ...string) string {
@@ -73,5 +74,6 @@ func LoadConfig() *Config {
 		RPC_URL:                        GetEnv("RPC_URL", "https://api.devnet.solana.com"),
 		SUPABASE_PRIVATE_KEY:           GetEnv("SUPABASE_PRIVATE_KEY"),
 		SUPABASE_URL:                   GetEnv("SUPABASE_URL"),
+		SWAP_SERVICE_URL:               GetEnv("SWAP_SERVICE_URL", "http://localhost:8081"),
 	}
 }
