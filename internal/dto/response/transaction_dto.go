@@ -18,6 +18,28 @@ func (d Decimal2) MarshalJSON() ([]byte, error) {
 	return []byte(strconv.FormatFloat(float64(d), 'f', 2, 64)), nil
 }
 
+// Decimal6 is encoded as a JSON number with exactly 6 decimal places.
+type Decimal6 float64
+
+func NewDecimal6(v float64) Decimal6 {
+	return Decimal6(math.Round(v*1000000) / 1000000)
+}
+
+func (d Decimal6) MarshalJSON() ([]byte, error) {
+	return []byte(strconv.FormatFloat(float64(d), 'f', 6, 64)), nil
+}
+
+// Decimal9 is encoded as a JSON number with exactly 9 decimal places.
+type Decimal9 float64
+
+func NewDecimal9(v float64) Decimal9 {
+	return Decimal9(math.Round(v*1000000000) / 1000000000)
+}
+
+func (d Decimal9) MarshalJSON() ([]byte, error) {
+	return []byte(strconv.FormatFloat(float64(d), 'f', 9, 64)), nil
+}
+
 type TransactionOnChainDTO struct {
 	TxHash    string `json:"tx_hash"`
 	Signature string `json:"signature"`
@@ -37,7 +59,8 @@ type TransactionDTO struct {
 	Status              string                  `json:"status"`
 	Category            *entities.Category      `json:"category"`
 	THBAmount           Decimal2                `json:"thb_amount"`
-	USDTAmount          float64                 `json:"usdt_amount"`
+	USDTAmount          Decimal6                `json:"usdt_amount"`
+	SOLAmount           Decimal9                `json:"sol_amount"`
 	Fee                 float64                 `json:"fee"`
 	TransactionOnChain  *TransactionOnChainDTO  `json:"transaction_on_chain,omitempty"`
 	TransactionOffChain *TransactionOffChainDTO `json:"transaction_off_chain,omitempty"`
@@ -71,7 +94,8 @@ func FormatTransactionDTO(transaction *entities.TransactionEntity) *TransactionD
 		Status:              transaction.Status,
 		Category:            transaction.Category,
 		THBAmount:           NewDecimal2(transaction.THBAmount / 100),
-		USDTAmount:          transaction.USDTAmount,
+		USDTAmount:          NewDecimal6(transaction.USDTAmount),
+		SOLAmount:           NewDecimal9(transaction.SOLAmount),
 		Fee:                 transaction.Fee,
 		TransactionOnChain:  onChain,
 		TransactionOffChain: offChain,

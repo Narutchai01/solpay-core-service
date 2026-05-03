@@ -14,6 +14,7 @@ type TransactionEntity struct {
 	Status              string               `json:"status" gorm:"not null;default:'pending'"`
 	THBAmount           float64              `json:"thb_amount" gorm:"not null;default:0"`
 	USDTAmount          float64              `json:"usdt_amount" gorm:"not null;default:0"`
+	SOLAmount           float64              `json:"sol_amount" gorm:"not null;default:0"`
 	Fee                 float64              `json:"fee" gorm:"not null;default:0"`
 	TransactionOnChain  *TransactionOnChain  `json:"transaction_on_chain,omitempty" gorm:"foreignKey:TransactionID;references:TransactionUUID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	TransactionOffChain *TransactionOffChain `json:"transaction_off_chain,omitempty" gorm:"foreignKey:TransactionID;references:TransactionUUID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
@@ -64,6 +65,7 @@ const (
 	TOPUP    TransactionType = "TOPUP"
 	ONCHAIN  TransactionType = "ONCHAIN"
 	OFFCHAIN TransactionType = "OFFCHAIN"
+	SWAP     TransactionType = "SWAP"
 )
 
 func (t *TransactionEntity) BeforeCreate(tx *gorm.DB) (err error) {
