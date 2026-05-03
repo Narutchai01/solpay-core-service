@@ -11,3 +11,9 @@ type SwapUnsignedTransactionRequest struct {
 	PoolID    string  `json:"poolId" query:"poolId"`
 	InputMint string  `json:"inputMint" query:"inputMint"`
 }
+
+type ExecuteSwapTransactionRequest struct {
+	USDTAmount string `json:"usdt_amount" query:"usdt_amount"`
+	SOLAmount  string `json:"sol_amount" query:"sol_amount"`
+	TxHash     string `json:"tx_hash" validate:"required"`
+}

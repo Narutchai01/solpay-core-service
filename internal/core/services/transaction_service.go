@@ -190,6 +190,8 @@ func (s *transactionService) routeEvent(ctx context.Context, tx *entities.Transa
 		return s.offchainWorkflow(ctx, tx, event)
 	case string(entities.ONCHAIN):
 		return s.onchainWorkflow(ctx, tx, event)
+	case string(entities.SWAP):
+		return s.swapWorkflow(ctx, tx, event)
 	default:
 		return nil
 	}
@@ -259,6 +261,23 @@ func (s *transactionService) onchainWorkflow(ctx context.Context, tx *entities.T
 		return s.publishPaymentTransaction(tx)
 	case string(entities.StatusPaymentSuccess):
 		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusCompleted)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *transactionService) swapWorkflow(ctx context.Context, tx *entities.TransactionEntity, event request.TransactionMessage) error {
+	switch event.Status {
+	case string(entities.StatusSolanaSubmitted):
+		return s.publishBlockchainTransaction(tx)
+	case string(entities.StatusSolanaSuccess):
+		// For SWAP, success from blockchain means the transaction is complete
+		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusCompleted)); err != nil {
+			return err
+		}
+	case string(entities.StatusSolanaFailed):
+		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusFailed)); err != nil {
 			return err
 		}
 	}
