@@ -1,0 +1,35 @@
+package handler
+
+import (
+	"github.com/Narutchai01/solpay-core-service/internal/core/services"
+	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
+	"github.com/Narutchai01/solpay-core-service/internal/entities"
+	"github.com/Narutchai01/solpay-core-service/internal/utils"
+	"github.com/gofiber/fiber/v2"
+)
+
+type SwapHandler interface {
+	GetSwapQuote(c *fiber.Ctx) error
+}
+
+type swapHandler struct {
+	service services.SwapService
+}
+
+func NewSwapHandler(service services.SwapService) SwapHandler {
+	return &swapHandler{service: service}
+}
+
+func (h *swapHandler) GetSwapQuote(c *fiber.Ctx) error {
+	var query request.SwapQuoteRequest
+	if err := c.QueryParser(&query); err != nil {
+		return utils.HandleResponse(c, nil, entities.NewAppError(entities.ErrTypeBadRequest, "invalid query parameters", err))
+	}
+
+	resp, err := h.service.GetSwapQuote(query)
+	if err != nil {
+		return utils.HandleResponse(c, nil, err)
+	}
+
+	return utils.HandleResponse(c, resp, nil, "get swap quote successfully")
+}
