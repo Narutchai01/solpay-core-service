@@ -45,6 +45,8 @@ services:
       MQ_PASSWORD: ${MQ_PASSWORD}
       MQ_VHOST: ${MQ_VHOST}
       MQ_URL: amqp://${MQ_USER}:${MQ_PASSWORD}@solpay-rabbitmq:${MQ_PORT}/${MQ_VHOST}
+      SWAP_SERVICE_PORT: ${SWAP_SERVICE_PORT}
+      SWAP_SERVICE_URL: http://solpay-swap-service:${SWAP_SERVICE_PORT}/api/v1
     networks:
       - solpay-network
 
