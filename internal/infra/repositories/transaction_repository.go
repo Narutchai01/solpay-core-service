@@ -31,6 +31,11 @@ func (r *transactionRepository) CreateTransactionOnChain(txCtx context.Context, 
 	return tx.Create(data).Error
 }
 
+func (r *transactionRepository) UpdateTransactionOnChain(txCtx context.Context, data *entities.TransactionOnChain) error {
+	tx := db.GetTx(txCtx, r.db)
+	return tx.Save(data).Error
+}
+
 func (r *transactionRepository) CreateTransactionOffChain(txCtx context.Context, data *entities.TransactionOffChain) error {
 	tx := db.GetTx(txCtx, r.db)
 	return tx.Create(data).Error
