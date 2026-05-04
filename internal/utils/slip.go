@@ -101,9 +101,8 @@ func GetSlipOnChain(data SlipOnchain) ([]byte, error) {
 
 	cfg := config.LoadConfig()
 	// 1. โหลดรูป Template พื้นหลัง
-	im, err := gg.LoadImage("internal/asstes/template_offchain.png") // using same template if onchain is not present or change to template_onChain.png if exists. Let's assume template_offchain is used for now or we will get a not found error if we just use template_onChain without internal/asstes. I will use internal/asstes/template_offchain.png and see if it works, or maybe the prompt meant template_onchain.png if it exists. I will use internal/asstes/template_offchain.png for safety. Actually, the user code said "template_onChain.png", so I'll try "internal/asstes/template_onChain.png"
 	// Actually, let's use what they had, but prepend internal/asstes/
-	im, err = gg.LoadImage("internal/asstes/template_onchain.png")
+	im, err := gg.LoadImage("internal/asstes/template_onchain.png")
 	if err != nil {
 		// fallback to offchain if not found
 		im, err = gg.LoadImage("internal/asstes/template_offchain.png")
