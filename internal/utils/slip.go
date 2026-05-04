@@ -144,7 +144,7 @@ func GetSlipOnChain(data SlipOnchain) ([]byte, error) {
 	// ตัวเลข 1.0 คือให้ anchor (จุดศูนย์กลางการจัดหน้า) อยู่ด้านขวา
 	dc.DrawStringAnchored(fmt.Sprintf("%.2f THB", data.THBAmount), float64(dc.Width()-11), 372, 1.0, 0.5)
 	dc.DrawStringAnchored(fmt.Sprintf("%.6f USDT", data.USDTAmount), float64(dc.Width()-11), 409, 1.0, 0.5)
-	dc.DrawStringAnchored(fmt.Sprintf("%.2f", data.FreeAmount), float64(dc.Width()-11), 445, 1.0, 0.5)
+	dc.DrawStringAnchored(fmt.Sprintf("%.2f USDT", data.FreeAmount), float64(dc.Width()-11), 445, 1.0, 0.5)
 
 	// 4. สร้าง QR Code
 	qrData := fmt.Sprintf(cfg.SLIP_INFORMATION, data.TransactionID) // ข้อมูล PromptPay หรือ URL
