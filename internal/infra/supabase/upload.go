@@ -62,7 +62,17 @@ func (s *SupabaseStorage) UploadFile(bucketName string, filePath string, fileCon
 		return "", err
 	}
 
-	url := fmt.Sprintf("%s/storage/v1/object/public/%s/%s", projectBaseURL, bucketName, objectPath)
+	if bucketName == "slip" {
+		publicUrlResp := storageClient.GetPublicUrl(bucketName, objectPath)
+		return publicUrlResp.SignedURL, nil
+	}
+
+	signedUrlResp, err := storageClient.CreateSignedUrl(bucketName, objectPath, 604800) // 7 days (604800 seconds)
+	if err != nil {
+		return "", fmt.Errorf("failed to create signed url: %w", err)
+	}
+
+	url := storageAPIURL + signedUrlResp.SignedURL
 
 	return url, nil
 }

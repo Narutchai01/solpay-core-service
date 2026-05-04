@@ -36,6 +36,11 @@ func (r *transactionRepository) CreateTransactionOffChain(txCtx context.Context,
 	return tx.Create(data).Error
 }
 
+func (r *transactionRepository) UpdateTransactionOffChain(txCtx context.Context, data *entities.TransactionOffChain) error {
+	tx := db.GetTx(txCtx, r.db)
+	return tx.Save(data).Error
+}
+
 func (r *transactionRepository) UpdateTransactionStatus(txCtx context.Context, transactionUUID string, status string) error {
 	tx := db.GetTx(txCtx, r.db)
 	return tx.Model(&entities.TransactionEntity{}).
@@ -48,6 +53,7 @@ func (r *transactionRepository) GetTransactionByAccountID(accountID int) ([]enti
 	if err := r.db.
 		Where("account_id = ?", accountID).
 		Preload("Category").
+		Preload("Account").
 		Find(&transactions).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, entities.ErrNotFound
@@ -61,6 +67,7 @@ func (r *transactionRepository) GetTransactionByID(transactionID int) (*entities
 	var transaction entities.TransactionEntity
 	if err := r.db.
 		Preload("Category").
+		Preload("Account").
 		Preload("TransactionOnChain").
 		Preload("TransactionOffChain").
 		First(&transaction, transactionID).Error; err != nil {
@@ -76,6 +83,7 @@ func (r *transactionRepository) GetTransactionByUUID(txUUID uuid.UUID) (*entitie
 	var transaction entities.TransactionEntity
 	err := r.db.
 		Preload("Category").
+		Preload("Account").
 		Preload("TransactionOnChain").
 		Preload("TransactionOffChain").
 		Where("transaction_uuid = ?", txUUID.String()).
@@ -124,6 +132,7 @@ func (r *transactionRepository) GetTransactions(query request.TransactionQuery, 
 		Limit(query.GetLimit()).
 		Offset(query.GetOffset()).
 		Preload("Category").
+		Preload("Account").
 		Preload("TransactionOnChain").
 		Preload("TransactionOffChain").
 		Find(&transactions).Error

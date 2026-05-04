@@ -14,7 +14,9 @@ import (
 	"github.com/Narutchai01/solpay-core-service/internal/dto/request"
 	"github.com/Narutchai01/solpay-core-service/internal/dto/response"
 	"github.com/Narutchai01/solpay-core-service/internal/entities"
+	"github.com/Narutchai01/solpay-core-service/internal/infra/supabase"
 	"github.com/Narutchai01/solpay-core-service/internal/models"
+	"github.com/Narutchai01/solpay-core-service/internal/utils"
 	"github.com/google/uuid"
 )
 
@@ -233,6 +235,50 @@ func (s *transactionService) offchainWorkflow(ctx context.Context, tx *entities.
 		}
 		return s.publishPaymentTransaction(tx)
 	case string(entities.StatusPaymentSuccess):
+		cfg := config.LoadConfig()
+
+		// Generate Slip
+		var address string
+		if tx.Account != nil {
+			address = tx.Account.PublicAddress
+		}
+		var promptPayID string
+		if tx.TransactionOffChain != nil {
+			promptPayID = tx.TransactionOffChain.PromptPayID
+		}
+
+		slipData := utils.SlipOffchain{
+			Address:       address,
+			Amount:        tx.THBAmount / 100.0, // Amount is stored as satang, but GetSlipOFFCHAINInformation seems to expect float64 THB
+			TransactionID: tx.TransactionUUID.String(),
+			PromptPayID:   promptPayID,
+			CreatedAt:     tx.CreatedAt.Format("02/01/2006 15:04:05"),
+		}
+
+		slipBytes, err := utils.GetSlipOFFCHAINInformation(slipData)
+		if err != nil {
+			log.Printf("failed to generate slip: %v", err)
+			return err
+		}
+
+		// Upload to Supabase
+		supabaseStorage := supabase.NewSupabaseStorage(cfg.SUPABASE_PRIVATE_KEY, cfg.SUPABASE_URL)
+		fileName := fmt.Sprintf("%s.png", tx.TransactionUUID.String())
+		slipURL, err := supabaseStorage.UploadFile("slip", fileName, slipBytes)
+		if err != nil {
+			log.Printf("failed to upload slip: %v", err)
+			return err
+		}
+
+		// Update TransactionOffChain with SlipURL
+		if tx.TransactionOffChain != nil {
+			tx.TransactionOffChain.SlipURL = &slipURL
+			if err := s.transactionRepo.UpdateTransactionOffChain(ctx, tx.TransactionOffChain); err != nil {
+				log.Printf("failed to update TransactionOffChain: %v", err)
+				return err
+			}
+		}
+
 		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusCompleted)); err != nil {
 			return err
 		}

@@ -79,11 +79,8 @@ func (s *offChainService) ComFirmOffchain(ctx context.Context, req request.OffCh
 			return nil, entities.NewAppError(entities.ErrTypeBadRequest, "promptpay_id is required for offchain confirm", nil)
 		}
 
-		slipURL := "https://images.unsplash.com/photo-1776320644111-f72194d35eb8?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-
 		txOffChain := &entities.TransactionOffChain{
 			TransactionID: tx.TransactionUUID,
-			SlipURL:       &slipURL,
 			PromptPayID:   *quote.PromptPayID,
 		}
 

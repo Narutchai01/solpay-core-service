@@ -19,8 +19,9 @@ type TransactionEntity struct {
 	TransactionOnChain  *TransactionOnChain  `json:"transaction_on_chain,omitempty" gorm:"foreignKey:TransactionID;references:TransactionUUID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	TransactionOffChain *TransactionOffChain `json:"transaction_off_chain,omitempty" gorm:"foreignKey:TransactionID;references:TransactionUUID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 
-	LogPayment *LogPayment `json:"log_payment,omitempty" gorm:"foreignKey:TransactionUUID;references:TransactionUUID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	Category   *Category   `json:"category,omitempty" gorm:"foreignKey:CategoryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	LogPayment *LogPayment    `json:"log_payment,omitempty" gorm:"foreignKey:TransactionUUID;references:TransactionUUID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	Category   *Category      `json:"category,omitempty" gorm:"foreignKey:CategoryID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	Account    *AccountEntity `json:"account,omitempty" gorm:"foreignKey:AccountID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
 type TransactionOnChain struct {
