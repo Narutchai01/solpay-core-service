@@ -36,6 +36,11 @@ func (r *transactionRepository) CreateTransactionOffChain(txCtx context.Context,
 	return tx.Create(data).Error
 }
 
+func (r *transactionRepository) UpdateTransactionOffChain(txCtx context.Context, data *entities.TransactionOffChain) error {
+	tx := db.GetTx(txCtx, r.db)
+	return tx.Save(data).Error
+}
+
 func (r *transactionRepository) UpdateTransactionStatus(txCtx context.Context, transactionUUID string, status string) error {
 	tx := db.GetTx(txCtx, r.db)
 	return tx.Model(&entities.TransactionEntity{}).
@@ -76,6 +81,7 @@ func (r *transactionRepository) GetTransactionByUUID(txUUID uuid.UUID) (*entitie
 	var transaction entities.TransactionEntity
 	err := r.db.
 		Preload("Category").
+		Preload("Account").
 		Preload("TransactionOnChain").
 		Preload("TransactionOffChain").
 		Where("transaction_uuid = ?", txUUID.String()).
