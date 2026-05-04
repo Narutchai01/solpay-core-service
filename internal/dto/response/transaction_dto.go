@@ -65,6 +65,7 @@ type TransactionDTO struct {
 	TransactionOnChain  *TransactionOnChainDTO  `json:"transaction_on_chain,omitempty"`
 	TransactionOffChain *TransactionOffChainDTO `json:"transaction_off_chain,omitempty"`
 	CreatedAt           string                  `json:"created_at"`
+	AccountDTO          *AccountDTO             `json:"account,omitempty"`
 	UpdatedAt           string                  `json:"updated_at"`
 }
 
@@ -86,6 +87,11 @@ func FormatTransactionDTO(transaction *entities.TransactionEntity) *TransactionD
 		}
 	}
 
+	var accountDTO *AccountDTO
+	if transaction.Account != nil {
+		accountDTO = FormatAccountDTO(transaction.Account)
+	}
+
 	return &TransactionDTO{
 		ID:                  transaction.ID,
 		TransactionUUID:     transaction.TransactionUUID.String(),
@@ -100,6 +106,7 @@ func FormatTransactionDTO(transaction *entities.TransactionEntity) *TransactionD
 		TransactionOnChain:  onChain,
 		TransactionOffChain: offChain,
 		CreatedAt:           transaction.CreatedAt.String(),
+		AccountDTO:          accountDTO,
 		UpdatedAt:           transaction.UpdatedAt.String(),
 	}
 }
