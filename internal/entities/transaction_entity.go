@@ -30,6 +30,7 @@ type TransactionOnChain struct {
 	Signature     string             `json:"signature" gorm:"not null;"`
 	Transaction   *TransactionEntity `json:"transaction,omitempty" gorm:"foreignKey:TransactionID;references:TransactionUUID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	TxHash        string             `json:"tx_hash" gorm:"not null;uniqueIndex"`
+	SlipURL       *string            `json:"slip_url" gorm:"default:null"`
 }
 
 type TransactionOffChain struct {
