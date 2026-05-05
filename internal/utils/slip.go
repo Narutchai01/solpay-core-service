@@ -8,10 +8,25 @@ import (
 	"image/png"
 	"net/http"
 
+	"github.com/Narutchai01/solpay-core-service/internal/assets"
 	"github.com/Narutchai01/solpay-core-service/internal/config"
 	"github.com/fogleman/gg"
+	"github.com/golang/freetype/truetype"
 	"github.com/skip2/go-qrcode"
 )
+
+// LoadEmbeddedFont loads an embedded TTF font and sets it to the gg.Context
+func LoadEmbeddedFont(dc *gg.Context, fontBytes []byte, points float64) error {
+	font, err := truetype.Parse(fontBytes)
+	if err != nil {
+		return err
+	}
+	face := truetype.NewFace(font, &truetype.Options{
+		Size: points,
+	})
+	dc.SetFontFace(face)
+	return nil
+}
 
 // downloadImage fetches an image from a given URL and decodes it.
 func downloadImage(url string) (image.Image, error) {
@@ -62,7 +77,7 @@ func GetSlipOFFCHAINInformation(data SlipOffchain) ([]byte, error) {
 
 	// โหลดฟอนต์ (ต้องมีไฟล์ฟอนต์ .ttf ในโฟลเดอร์)
 	// ปรับขนาดฟอนต์ (เช่น 20) ตามความเหมาะสมของขนาดรูป
-	if err := dc.LoadFontFace("internal/asstes/Kanit-Regular.ttf", 14); err != nil {
+	if err := LoadEmbeddedFont(dc, assets.KanitFontBytes, 14); err != nil {
 		return nil, fmt.Errorf("cannot load font: %w", err)
 	}
 
@@ -78,12 +93,12 @@ func GetSlipOFFCHAINInformation(data SlipOffchain) ([]byte, error) {
 	dc.DrawString(displayAddress, 85, 144) // เลขบัญชีผู้โอน
 
 	// โหลดฟอนต์แบบหนา (Bold) สำหรับชื่อ
-	dc.LoadFontFace("internal/asstes/Kanit-Regular.ttf", 14)
+	LoadEmbeddedFont(dc, assets.KanitFontBytes, 14)
 	dc.DrawString(data.PromptPayID, 85, 280)
 
 	// จำนวนเงิน (ชิดขวา)
 	dc.SetHexColor("#000000")
-	dc.LoadFontFace("internal/asstes/Kanit-Regular.ttf", 14)
+	LoadEmbeddedFont(dc, assets.KanitFontBytes, 14)
 	// ตัวเลข 1.0 คือให้ anchor (จุดศูนย์กลางการจัดหน้า) อยู่ด้านขวา
 	dc.DrawStringAnchored(fmt.Sprintf("%.2f THB", data.Amount), float64(dc.Width()-40), 370, 1.0, 0.5)
 
@@ -137,9 +152,9 @@ func GetSlipOnChain(data SlipOnchain) ([]byte, error) {
 		im, err = downloadImage(fallbackURL)
 		if err != nil {
 			// Fallback to local files
-			im, err = gg.LoadImage("internal/asstes/template_onChain.png")
+			im, err = gg.LoadImage("internal/assets/template_onChain.png")
 			if err != nil {
-				im, err = gg.LoadImage("internal/asstes/template_offchain.png")
+				im, err = gg.LoadImage("internal/assets/template_offchain.png")
 				if err != nil {
 					return nil, fmt.Errorf("cannot load template from URL or local paths: %w", err)
 				}
@@ -155,7 +170,7 @@ func GetSlipOnChain(data SlipOnchain) ([]byte, error) {
 
 	// โหลดฟอนต์ (ต้องมีไฟล์ฟอนต์ .ttf ในโฟลเดอร์)
 	// ปรับขนาดฟอนต์ (เช่น 20) ตามความเหมาะสมของขนาดรูป
-	if err := dc.LoadFontFace("internal/asstes/Kanit-Regular.ttf", 14); err != nil {
+	if err := LoadEmbeddedFont(dc, assets.KanitFontBytes, 14); err != nil {
 		return nil, fmt.Errorf("cannot load font: %w", err)
 	}
 
@@ -171,12 +186,12 @@ func GetSlipOnChain(data SlipOnchain) ([]byte, error) {
 	dc.DrawString(displayAddress, 85, 144) // เลขบัญชีผู้โอน
 
 	// โหลดฟอนต์แบบหนา (Bold) สำหรับชื่อ
-	dc.LoadFontFace("internal/asstes/Kanit-Regular.ttf", 14)
+	LoadEmbeddedFont(dc, assets.KanitFontBytes, 14)
 	dc.DrawString(data.PromptPayID, 85, 280)
 
 	// จำนวนเงิน (ชิดขวา)
 	dc.SetHexColor("#000000")
-	dc.LoadFontFace("internal/asstes/Kanit-Regular.ttf", 14)
+	LoadEmbeddedFont(dc, assets.KanitFontBytes, 14)
 	// ตัวเลข 1.0 คือให้ anchor (จุดศูนย์กลางการจัดหน้า) อยู่ด้านขวา
 	dc.DrawStringAnchored(fmt.Sprintf("%.2f THB", data.THBAmount), float64(dc.Width()-11), 372, 1.0, 0.5)
 	dc.DrawStringAnchored(fmt.Sprintf("%.6f USDT", data.USDTAmount), float64(dc.Width()-11), 409, 1.0, 0.5)
