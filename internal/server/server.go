@@ -42,7 +42,7 @@ func (s *Server) Start() error {
 	}))
 
 	s.app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3000",
+		AllowOrigins:     s.cfg.ALLOW_ORIGIN,
 		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
 		AllowCredentials: true,
