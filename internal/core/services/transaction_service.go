@@ -206,8 +206,8 @@ func (s *transactionService) topupWorkflow(ctx context.Context, tx *entities.Tra
 			return err
 		}
 		return s.publishBlockchainTransaction(tx)
-	case string(entities.StatusSolanaFailed):
-		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusSolanaFailed)); err != nil {
+	case string(entities.StatusSolanaFailed), string(entities.StatusBalanceFailed):
+		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusFailed)); err != nil {
 			return err
 		}
 	case string(entities.StatusSolanaSuccess):
@@ -282,6 +282,10 @@ func (s *transactionService) offchainWorkflow(ctx context.Context, tx *entities.
 		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusCompleted)); err != nil {
 			return err
 		}
+	case string(entities.StatusBalanceFailed), string(entities.StatusPaymentFailed):
+		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusFailed)); err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("unhandled transaction status: %s", event.Status)
 	}
@@ -296,7 +300,7 @@ func (s *transactionService) onchainWorkflow(ctx context.Context, tx *entities.T
 			return err
 		}
 		return s.publishBlockchainTransaction(tx)
-	case string(entities.StatusSolanaFailed):
+	case string(entities.StatusSolanaFailed), string(entities.StatusPaymentFailed):
 		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusFailed)); err != nil {
 			return err
 		}
@@ -368,7 +372,7 @@ func (s *transactionService) swapWorkflow(ctx context.Context, tx *entities.Tran
 		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusCompleted)); err != nil {
 			return err
 		}
-	case string(entities.StatusSolanaFailed):
+	case string(entities.StatusSolanaFailed), string(entities.StatusBalanceFailed), string(entities.StatusPaymentFailed):
 		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusFailed)); err != nil {
 			return err
 		}
