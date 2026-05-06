@@ -33,6 +33,7 @@ type Config struct {
 	SUPABASE_URL                   string
 	SWAP_SERVICE_URL               string
 	SLIP_INFORMATION               string
+	ALLOW_ORIGIN                   string
 }
 
 func GetEnv(key string, fallback ...string) string {
@@ -77,5 +78,6 @@ func LoadConfig() *Config {
 		SUPABASE_URL:                   GetEnv("SUPABASE_URL"),
 		SWAP_SERVICE_URL:               GetEnv("SWAP_SERVICE_URL", "http://localhost:8081"),
 		SLIP_INFORMATION:               GetEnv("SLIP_INFORMATION", "http://localhost:3000"),
+		ALLOW_ORIGIN:                   GetEnv("ALLOW_ORIGIN", "http://localhost:3000"),
 	}
 }
