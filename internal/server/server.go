@@ -43,7 +43,7 @@ func (s *Server) Start() error {
 
 	s.app.Use(cors.New(cors.Config{
 		AllowOrigins:     s.cfg.ALLOW_ORIGIN,
-		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
+		AllowMethods:     "GET,POST,PUT,PATCH,DELETE,OPTIONS",
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
 		AllowCredentials: true,
 	}))

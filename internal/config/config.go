@@ -77,7 +77,7 @@ func LoadConfig() *Config {
 		SUPABASE_PRIVATE_KEY:           GetEnv("SUPABASE_PRIVATE_KEY"),
 		SUPABASE_URL:                   GetEnv("SUPABASE_URL"),
 		SWAP_SERVICE_URL:               GetEnv("SWAP_SERVICE_URL", "http://localhost:8081"),
-		SLIP_INFORMATION:               GetEnv("SLIP_INFORMATION", "http://localhost:3000"),
+		SLIP_INFORMATION:               GetEnv("SLIP_INFORMATION", "http://localhost:3000/transformation"),
 		ALLOW_ORIGIN:                   GetEnv("ALLOW_ORIGIN", "http://localhost:3000"),
 	}
 }
