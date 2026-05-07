@@ -25,7 +25,8 @@ type Server struct {
 // New creates a new Server with the given configuration.
 func New(cfg *config.Config, queueConfig []rabbitmq.QueueConfig) *Server {
 	app := fiber.New(fiber.Config{
-		AppName: "Solpay core service",
+		AppName:   "Solpay core service",
+		BodyLimit: 50 * 1024 * 1024, // 50MB
 	})
 
 	return &Server{
