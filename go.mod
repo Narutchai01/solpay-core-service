@@ -14,7 +14,7 @@ require (
 	github.com/omise/omise-go v1.7.1
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/stretchr/testify v1.11.1
-	github.com/supabase-community/storage-go v0.7.0
+	github.com/supabase-community/storage-go v0.8.1
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.31.1
 )
