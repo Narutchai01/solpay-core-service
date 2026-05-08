@@ -6,6 +6,7 @@ import (
 	"github.com/Narutchai01/solpay-core-service/internal/handler"
 	"github.com/Narutchai01/solpay-core-service/internal/infra/repositories"
 	"github.com/Narutchai01/solpay-core-service/internal/infra/supabase"
+	"github.com/Narutchai01/solpay-core-service/internal/middlewares"
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 )
@@ -26,11 +27,12 @@ func NewUserRouteConfig(route fiber.Router, db *gorm.DB, cfg *config.Config) *Us
 
 func (urc *UserRouteConfig) Setup() {
 	userRepo := repositories.NewGormUserRepository(urc.db)
+	accountRepo := repositories.NewGormAccountRepository(urc.db)
 	storage := supabase.NewSupabaseStorage(urc.cfg.SUPABASE_PRIVATE_KEY, urc.cfg.SUPABASE_URL)
-	userService := services.NewUserService(userRepo, storage)
+	userService := services.NewUserService(userRepo, accountRepo, storage)
 	userHandler := handler.NewUserHandler(userService)
 
 	urc.route.Get("/", userHandler.GetUsersHandler)
-	urc.route.Post("/", userHandler.CreateUserHandler)
+	urc.route.Post("/", middlewares.AuthRequired(), userHandler.CreateUserHandler)
 	urc.route.Patch("/approve", userHandler.ApproveUserHandler)
 }

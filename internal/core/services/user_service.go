@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -18,23 +19,25 @@ const userFrontCardBucketName = "kyc"
 
 type UserService interface {
 	ApprovalStatus(req *request.ApprovalStatus) (*response.UserResponse, error)
-	CreateUser(req *request.CreateUserRequest) (*response.UserResponse, error)
+	CreateUser(req *request.CreateUserRequest, accountID uint) (*response.UserResponse, error)
 	GetUsers(req request.UserQuery) (*response.UserListResponse, error)
 }
 
 type userService struct {
-	userRepo ports.UserRepository
-	storage  ports.Storage
+	userRepo    ports.UserRepository
+	accountRepo ports.AccountRepository
+	storage     ports.Storage
 }
 
-func NewUserService(userRepo ports.UserRepository, storage ports.Storage) UserService {
+func NewUserService(userRepo ports.UserRepository, accountRepo ports.AccountRepository, storage ports.Storage) UserService {
 	return &userService{
-		userRepo: userRepo,
-		storage:  storage,
+		userRepo:    userRepo,
+		accountRepo: accountRepo,
+		storage:     storage,
 	}
 }
 
-func (s *userService) CreateUser(req *request.CreateUserRequest) (*response.UserResponse, error) {
+func (s *userService) CreateUser(req *request.CreateUserRequest, accountID uint) (*response.UserResponse, error) {
 	if req == nil || req.FrontCardImage == nil {
 		return nil, entities.NewAppError(entities.ErrTypeBadRequest, "front_card_image is required", entities.ErrBadRequest)
 	}
@@ -99,6 +102,7 @@ func (s *userService) CreateUser(req *request.CreateUserRequest) (*response.User
 		IDCard:       req.IDCard,
 		FirstName:    req.FirstName,
 		LastName:     req.LastName,
+		AccountID:    accountID,
 		FrontCardURL: frontCardURL,
 		BackCardURL:  backCardURL,
 		FaceURL:      faceCardURL,
@@ -159,6 +163,16 @@ func (s *userService) ApprovalStatus(req *request.ApprovalStatus) (*response.Use
 			return nil, entities.NewAppError(entities.ErrTypeInternal, "failed to generate kyc token", err)
 		}
 		user.KYCToken = kycToken.String()
+
+		account, err := s.accountRepo.GetAccountByID(int(user.AccountID))
+		if err != nil {
+			return nil, err
+		}
+
+		account.KycToken = &user.KYCToken
+		if err := s.accountRepo.UpdateAccount(context.Background(), int(user.AccountID), account); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := s.userRepo.UpdateUser(user); err != nil {

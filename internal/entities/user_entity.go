@@ -5,6 +5,7 @@ import "gorm.io/gorm"
 type User struct {
 	gorm.Model
 	IDCard       string `json:"id_card" gorm:"not null;unique"`
+	AccountID    uint   `json:"account_id" gorm:"not null"`
 	FirstName    string `json:"first_name" gorm:"not null"`
 	LastName     string `json:"last_name" gorm:"not null"`
 	BirthDate    string `json:"birth_date" gorm:"not null"`

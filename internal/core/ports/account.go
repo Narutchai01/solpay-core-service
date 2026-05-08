@@ -12,4 +12,5 @@ type AccountRepository interface {
 	CountAccounts() (int64, error)
 	GetAccountByID(id int) (*entities.AccountEntity, error)
 	GetAccountByPublicAddress(address string) (*entities.AccountEntity, error)
+	UpdateAccount(txCtx context.Context, id int, data *entities.AccountEntity) error
 }
