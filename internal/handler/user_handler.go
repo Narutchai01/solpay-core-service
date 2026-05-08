@@ -79,7 +79,12 @@ func (h *userHandler) CreateUserHandler(c *fiber.Ctx) error {
 		return utils.HandleResponse(c, nil, entities.NewAppError(entities.ErrTypeBadRequest, "face_image must be an image", entities.ErrBadRequest))
 	}
 
-	user, err := h.userService.CreateUser(&req)
+	accountID, ok := utils.GetUserIDFromLocals(c)
+	if !ok {
+		return utils.HandleResponse(c, nil, entities.NewAppError(entities.ErrTypeBadRequest, "unauthorized", entities.ErrBadRequest))
+	}
+
+	user, err := h.userService.CreateUser(&req, accountID)
 	if err != nil {
 		return utils.HandleResponse(c, nil, err)
 	}
