@@ -39,5 +39,6 @@ func (src *SwapRouteConfig) Setup() {
 
 	src.route.Get("/quote", swapHandler.GetSwapQuote)
 	src.route.Post("/swap", middlewares.AuthRequired(), swapHandler.BuildSwapUnsignedTransaction)
+	src.route.Post("/instruction", middlewares.AuthRequired(), swapHandler.BuildSwapInstruction)
 	src.route.Post("/execute", middlewares.AuthRequired(), swapHandler.ExecuteSwapTransaction)
 }

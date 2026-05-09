@@ -8,4 +8,5 @@ import (
 type SwapRepository interface {
 	GetSwapQuote(query request.SwapQuoteRequest) (response.SwapQuoteFullResponse, error)
 	BuildSwapUnsignedTransaction(req request.SwapUnsignedTransactionRequest, walletAddress string) (response.SwapUnsignedTransactionFullResponse, error)
+	BuildSwapInstruction(req request.SwapUnsignedTransactionRequest, walletAddress string) (response.SwapUnsignedTransactionFullResponse, error)
 }
