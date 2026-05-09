@@ -50,6 +50,34 @@ func (s *userService) CreateUser(req *request.CreateUserRequest, accountID uint)
 		return nil, entities.NewAppError(entities.ErrTypeBadRequest, "face_image is required", entities.ErrBadRequest)
 	}
 
+	// 1. Pre-check for duplicate IDCard or AccountID
+	existingByID, errID := s.userRepo.GetUserByIDCard(req.IDCard)
+	existingByAcc, errAcc := s.userRepo.GetUserByAccountID(accountID)
+
+	var targetUser *entities.User
+
+	if errID == nil {
+		// IDCard exists. Check status.
+		if existingByID.Status != string(entities.UserStatusRejected) {
+			return nil, entities.NewAppError(entities.ErrTypeConflict, "ID Card already registered and is not rejected", entities.ErrConflict)
+		}
+		targetUser = existingByID
+	}
+
+	if errAcc == nil {
+		// Account already has a KYC record. Check status.
+		if existingByAcc.Status != string(entities.UserStatusRejected) {
+			return nil, entities.NewAppError(entities.ErrTypeConflict, "Account already has a KYC record that is not rejected", entities.ErrConflict)
+		}
+		// If both exist and are different records, we prefer the one with matching IDCard if possible,
+		// but usually an account shouldn't have multiple records.
+		// For simplicity, if account has a rejected record, we reuse/update it.
+		if targetUser == nil {
+			targetUser = existingByAcc
+		}
+	}
+
+	// 2. Upload images only if we are clear to proceed
 	frontCardFile, err := req.FrontCardImage.Open()
 	if err != nil {
 		return nil, entities.NewAppError(entities.ErrTypeBadRequest, "failed to open front_card_image", err)
@@ -98,6 +126,27 @@ func (s *userService) CreateUser(req *request.CreateUserRequest, accountID uint)
 		return nil, entities.NewAppError(entities.ErrTypeInternal, "failed to upload face_image", err)
 	}
 
+	// 3. Update or Create
+	if targetUser != nil {
+		// Update existing rejected record
+		targetUser.IDCard = req.IDCard
+		targetUser.FirstName = req.FirstName
+		targetUser.LastName = req.LastName
+		targetUser.AccountID = accountID
+		targetUser.FrontCardURL = frontCardURL
+		targetUser.BackCardURL = backCardURL
+		targetUser.FaceURL = faceCardURL
+		targetUser.BirthDate = req.BirthDate
+		targetUser.ExpireDate = req.ExpireDate
+		targetUser.Status = string(entities.UserStatusPending)
+
+		if err := s.userRepo.UpdateUser(targetUser); err != nil {
+			return nil, err
+		}
+		return response.FormatUserResponse(targetUser), nil
+	}
+
+	// Create new record
 	user := &entities.User{
 		IDCard:       req.IDCard,
 		FirstName:    req.FirstName,
@@ -115,20 +164,7 @@ func (s *userService) CreateUser(req *request.CreateUserRequest, accountID uint)
 		return nil, err
 	}
 
-	dto := &response.UserResponse{
-		ID:           user.ID,
-		IDCard:       user.IDCard,
-		FirstName:    user.FirstName,
-		LastName:     user.LastName,
-		BirthDate:    user.BirthDate,
-		Status:       user.Status,
-		ExpireDate:   user.ExpireDate,
-		FrontCardURL: user.FrontCardURL,
-		BackCardURL:  user.BackCardURL,
-		FaceURL:      user.FaceURL,
-	}
-
-	return dto, nil
+	return response.FormatUserResponse(user), nil
 }
 
 func buildFrontCardObjectPath(idCard, filename string) string {
@@ -179,20 +215,7 @@ func (s *userService) ApprovalStatus(req *request.ApprovalStatus) (*response.Use
 		return nil, err
 	}
 
-	dto := &response.UserResponse{
-		ID:           user.ID,
-		IDCard:       user.IDCard,
-		FirstName:    user.FirstName,
-		LastName:     user.LastName,
-		BirthDate:    user.BirthDate,
-		Status:       user.Status,
-		ExpireDate:   user.ExpireDate,
-		FrontCardURL: user.FrontCardURL,
-		BackCardURL:  user.BackCardURL,
-		FaceURL:      user.FaceURL,
-	}
-
-	return dto, nil
+	return response.FormatUserResponse(user), nil
 }
 
 func (s *userService) GetUsers(req request.UserQuery) (*response.UserListResponse, error) {
@@ -218,18 +241,7 @@ func (s *userService) GetUsers(req request.UserQuery) (*response.UserListRespons
 
 	var userResponses []*response.UserResponse
 	for _, user := range users {
-		userResponses = append(userResponses, &response.UserResponse{
-			ID:           user.ID,
-			IDCard:       user.IDCard,
-			FirstName:    user.FirstName,
-			LastName:     user.LastName,
-			BirthDate:    user.BirthDate,
-			Status:       user.Status,
-			ExpireDate:   user.ExpireDate,
-			FrontCardURL: user.FrontCardURL,
-			BackCardURL:  user.BackCardURL,
-			FaceURL:      user.FaceURL,
-		})
+		userResponses = append(userResponses, response.FormatUserResponse(user))
 	}
 
 	return &response.UserListResponse{

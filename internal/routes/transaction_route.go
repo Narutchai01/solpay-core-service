@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"github.com/Narutchai01/solpay-core-service/internal/config"
 	"github.com/Narutchai01/solpay-core-service/internal/core/services"
 	"github.com/Narutchai01/solpay-core-service/internal/handler"
 	"github.com/Narutchai01/solpay-core-service/internal/infra/rabbitmq"
@@ -31,7 +32,8 @@ func (trc *TransactionRouteConfig) Setup() {
 	transactionRepo := repositories.NewGormTransactionRepository(trc.db)
 	uow := repositories.NewSqlUnitOfWork(trc.db)
 	pub := rabbitmq.NewPublisher(trc.channel)
-	transactionService := services.NewTransactionService(transactionRepo, uow, pub, nil)
+	cfg := config.LoadConfig()
+	transactionService := services.NewTransactionService(transactionRepo, uow, pub, nil, cfg)
 	transactionHandler := handler.NewTransactionHandler(transactionService)
 
 	trc.route.Post("/", transactionHandler.CreateTransaction)
