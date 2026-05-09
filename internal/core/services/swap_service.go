@@ -17,6 +17,7 @@ import (
 type SwapService interface {
 	GetSwapQuote(query request.SwapQuoteRequest) (response.SwapQuoteData, error)
 	BuildSwapUnsignedTransaction(req request.SwapUnsignedTransactionRequest, userID uint) (response.BuildSwapTransactionResponse, error)
+	BuildSwapInstruction(req request.SwapUnsignedTransactionRequest, userID uint) (response.SwapUnsignedTransactionData, error)
 	ExecuteSwapTransaction(ctx context.Context, req request.ExecuteSwapTransactionRequest, accountID uint) (response.TransactionDTO, error)
 }
 
@@ -86,6 +87,31 @@ func (s *swapService) BuildSwapUnsignedTransaction(req request.SwapUnsignedTrans
 	return response.BuildSwapTransactionResponse{
 		Transaction: resp.Data.Transaction,
 	}, nil
+}
+
+func (s *swapService) BuildSwapInstruction(req request.SwapUnsignedTransactionRequest, userID uint) (response.SwapUnsignedTransactionData, error) {
+	// Convert AmountIn from decimal string to raw amount string (assuming 9 decimals)
+	if req.AmountIn != "" {
+		amountDecimal, err := strconv.ParseFloat(req.AmountIn, 64)
+		if err == nil {
+			rawAmount := int64(math.Round(amountDecimal * 1e9))
+			req.AmountIn = strconv.FormatInt(rawAmount, 10)
+		}
+	}
+
+	account, err := s.accountRepo.GetAccountByID(int(userID))
+	if err != nil {
+		if errors.Is(err, entities.ErrNotFound) {
+			return response.SwapUnsignedTransactionData{}, entities.NewAppError(entities.ErrTypeNotFound, "account not found", err)
+		}
+		return response.SwapUnsignedTransactionData{}, entities.NewAppError(entities.ErrTypeInternal, "failed to get account", err)
+	}
+
+	resp, err := s.repo.BuildSwapInstruction(req, account.PublicAddress)
+	if err != nil {
+		return response.SwapUnsignedTransactionData{}, entities.NewAppError(entities.ErrTypeInternal, "failed to build swap instruction", err)
+	}
+	return resp.Data, nil
 }
 
 func (s *swapService) ExecuteSwapTransaction(ctx context.Context, req request.ExecuteSwapTransactionRequest, accountID uint) (response.TransactionDTO, error) {

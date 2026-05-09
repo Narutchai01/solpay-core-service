@@ -33,10 +33,24 @@ type SwapUnsignedTransactionFullResponse struct {
 }
 
 type SwapUnsignedTransactionData struct {
-	TxID                 string `json:"txId"`
-	Transaction          string `json:"transaction"`
-	Blockhash            string `json:"blockhash"`
-	LastValidBlockHeight int64  `json:"lastValidBlockHeight"`
+	TxID                 string                `json:"txId,omitempty"`
+	Transaction          string                `json:"transaction,omitempty"`
+	Blockhash            string                `json:"blockhash,omitempty"`
+	LastValidBlockHeight int64                 `json:"lastValidBlockHeight,omitempty"`
+	Instructions         []InstructionResponse `json:"instructions,omitempty"`
+	LookupTableAddresses []string              `json:"lookupTableAddresses,omitempty"`
+}
+
+type InstructionResponse struct {
+	ProgramID string        `json:"programId"`
+	Keys      []KeyResponse `json:"keys"`
+	Data      string        `json:"data"`
+}
+
+type KeyResponse struct {
+	Pubkey     string `json:"pubkey"`
+	IsSigner   bool   `json:"isSigner"`
+	IsWritable bool   `json:"isWritable"`
 }
 
 type BuildSwapTransactionResponse struct {
