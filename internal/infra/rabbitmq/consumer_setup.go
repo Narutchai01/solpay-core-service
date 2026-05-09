@@ -3,6 +3,7 @@ package rabbitmq
 import (
 	"log"
 
+	"github.com/Narutchai01/solpay-core-service/internal/config"
 	"github.com/Narutchai01/solpay-core-service/internal/core/services"
 	"github.com/Narutchai01/solpay-core-service/internal/infra/payment"
 	"github.com/Narutchai01/solpay-core-service/internal/infra/repositories"
@@ -38,8 +39,9 @@ func (cs *ConsumerSetup) Setup() {
 	uow := repositories.NewSqlUnitOfWork(cs.db)
 	pub := NewPublisher(cs.channel)
 	omiseGW := payment.NewOmiseGateway(cs.omise)
+	cfg := config.LoadConfig()
 
-	transactionService := services.NewTransactionService(transactionRepo, uow, pub, cs.wsHub)
+	transactionService := services.NewTransactionService(transactionRepo, uow, pub, cs.wsHub, cfg)
 	balanceService := services.NewBalanceService(balanceRepo, uow, pub)
 	paymentService := services.NewPaymentService(omiseGW, paymentRepo)
 

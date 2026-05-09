@@ -43,6 +43,7 @@ type transactionService struct {
 	uow             ports.UnitOfWork
 	publisher       ports.Publisher
 	wsHub           ports.WebSocketPort
+	cfg             *config.Config
 }
 
 // NewTransactionService creates a new TransactionService.
@@ -51,12 +52,14 @@ func NewTransactionService(
 	uow ports.UnitOfWork,
 	publisher ports.Publisher,
 	wsHub ports.WebSocketPort,
+	cfg *config.Config,
 ) TransactionService {
 	return &transactionService{
 		transactionRepo: transactionRepo,
 		uow:             uow,
 		publisher:       publisher,
 		wsHub:           wsHub,
+		cfg:             cfg,
 	}
 }
 
@@ -181,7 +184,19 @@ func (s *transactionService) HandleTransactionUpdate(ctx context.Context, msg []
 		return err
 	}
 
-	return s.routeEvent(ctx, tx, event)
+	if err := s.routeEvent(ctx, tx, event); err != nil {
+		return s.finalizeFailed(ctx, event.TxID, err)
+	}
+
+	return nil
+}
+
+func (s *transactionService) finalizeFailed(ctx context.Context, txID string, err error) error {
+	log.Printf("finalizing transaction %s as FAILED due to: %v", txID, err)
+	if updateErr := s.updateStatusAndNotify(ctx, txID, string(entities.StatusFailed)); updateErr != nil {
+		return fmt.Errorf("failed to finalize transaction status to FAILED: %v (original error: %w)", updateErr, err)
+	}
+	return err
 }
 
 func (s *transactionService) routeEvent(ctx context.Context, tx *entities.TransactionEntity, event request.TransactionMessage) error {
@@ -202,25 +217,16 @@ func (s *transactionService) routeEvent(ctx context.Context, tx *entities.Transa
 func (s *transactionService) topupWorkflow(ctx context.Context, tx *entities.TransactionEntity, event request.TransactionMessage) error {
 	switch event.Status {
 	case string(entities.StatusSolanaSubmitted):
-		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusSolanaSubmitted)); err != nil {
-			return err
-		}
 		return s.publishBlockchainTransaction(tx)
-	case string(entities.StatusSolanaFailed), string(entities.StatusBalanceFailed):
-		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusFailed)); err != nil {
-			return err
-		}
+	case string(entities.StatusSolanaFailed), string(entities.StatusBalanceFailed), string(entities.StatusFailed):
+		return s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusFailed))
 	case string(entities.StatusSolanaSuccess):
 		return s.publishBalanceTransaction(tx, string(entities.ActionDeposit))
 	case string(entities.StatusBalanceUpdated):
-		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusCompleted)); err != nil {
-			return err
-		}
+		return s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusCompleted))
 	default:
-		return fmt.Errorf("unhandled transaction status: %s", event.Status)
+		return fmt.Errorf("unhandled transaction status in topup workflow: %s", event.Status)
 	}
-
-	return nil
 }
 
 func (s *transactionService) offchainWorkflow(ctx context.Context, tx *entities.TransactionEntity, event request.TransactionMessage) error {
@@ -235,7 +241,7 @@ func (s *transactionService) offchainWorkflow(ctx context.Context, tx *entities.
 		}
 		return s.publishPaymentTransaction(tx)
 	case string(entities.StatusPaymentSuccess):
-		cfg := config.LoadConfig()
+		cfg := s.cfg
 
 		// Generate Slip
 		var address string
@@ -257,8 +263,7 @@ func (s *transactionService) offchainWorkflow(ctx context.Context, tx *entities.
 
 		slipBytes, err := utils.GetSlipOFFCHAINInformation(slipData)
 		if err != nil {
-			log.Printf("failed to generate slip: %v", err)
-			return err
+			return fmt.Errorf("generate slip: %w", err)
 		}
 
 		// Upload to Supabase
@@ -266,51 +271,35 @@ func (s *transactionService) offchainWorkflow(ctx context.Context, tx *entities.
 		fileName := fmt.Sprintf("%s.png", tx.TransactionUUID.String())
 		slipURL, err := supabaseStorage.UploadFile("slip", fileName, slipBytes)
 		if err != nil {
-			log.Printf("failed to upload slip: %v", err)
-			return err
+			return fmt.Errorf("upload slip: %w", err)
 		}
 
 		// Update TransactionOffChain with SlipURL
 		if tx.TransactionOffChain != nil {
 			tx.TransactionOffChain.SlipURL = &slipURL
 			if err := s.transactionRepo.UpdateTransactionOffChain(ctx, tx.TransactionOffChain); err != nil {
-				log.Printf("failed to update TransactionOffChain: %v", err)
-				return err
+				return fmt.Errorf("update transaction offchain: %w", err)
 			}
 		}
 
-		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusCompleted)); err != nil {
-			return err
-		}
-	case string(entities.StatusBalanceFailed), string(entities.StatusPaymentFailed):
-		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusFailed)); err != nil {
-			return err
-		}
+		return s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusCompleted))
+	case string(entities.StatusBalanceFailed), string(entities.StatusPaymentFailed), string(entities.StatusFailed):
+		return s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusFailed))
 	default:
-		return fmt.Errorf("unhandled transaction status: %s", event.Status)
+		return fmt.Errorf("unhandled transaction status in offchain workflow: %s", event.Status)
 	}
-
-	return nil
 }
 
 func (s *transactionService) onchainWorkflow(ctx context.Context, tx *entities.TransactionEntity, event request.TransactionMessage) error {
 	switch event.Status {
 	case string(entities.StatusSolanaSubmitted):
-		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusSolanaSubmitted)); err != nil {
-			return err
-		}
 		return s.publishBlockchainTransaction(tx)
-	case string(entities.StatusSolanaFailed), string(entities.StatusPaymentFailed):
-		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusFailed)); err != nil {
-			return err
-		}
+	case string(entities.StatusSolanaFailed), string(entities.StatusBalanceFailed), string(entities.StatusPaymentFailed), string(entities.StatusFailed):
+		return s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusFailed))
 	case string(entities.StatusSolanaSuccess):
-		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusSolanaSuccess)); err != nil {
-			return err
-		}
 		return s.publishPaymentTransaction(tx)
 	case string(entities.StatusPaymentSuccess):
-		cfg := config.LoadConfig()
+		cfg := s.cfg
 
 		// Generate Slip
 		var address string
@@ -334,8 +323,7 @@ func (s *transactionService) onchainWorkflow(ctx context.Context, tx *entities.T
 
 		slipBytes, err := utils.GetSlipOnChain(slipData)
 		if err != nil {
-			log.Printf("failed to generate onchain slip: %v", err)
-			return err
+			return fmt.Errorf("generate onchain slip: %w", err)
 		}
 
 		// Upload to Supabase
@@ -343,24 +331,21 @@ func (s *transactionService) onchainWorkflow(ctx context.Context, tx *entities.T
 		fileName := fmt.Sprintf("onchain_%s.png", tx.TransactionUUID.String())
 		slipURL, err := supabaseStorage.UploadFile("slip", fileName, slipBytes)
 		if err != nil {
-			log.Printf("failed to upload onchain slip: %v", err)
-			return err
+			return fmt.Errorf("upload onchain slip: %w", err)
 		}
 
 		// Update TransactionOffChain with SlipURL
 		if tx.TransactionOffChain != nil {
 			tx.TransactionOffChain.SlipURL = &slipURL
 			if err := s.transactionRepo.UpdateTransactionOffChain(ctx, tx.TransactionOffChain); err != nil {
-				log.Printf("failed to update TransactionOffChain: %v", err)
-				return err
+				return fmt.Errorf("update transaction offchain: %w", err)
 			}
 		}
 
-		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusCompleted)); err != nil {
-			return err
-		}
+		return s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusCompleted))
+	default:
+		return fmt.Errorf("unhandled transaction status in onchain workflow: %s", event.Status)
 	}
-	return nil
 }
 
 func (s *transactionService) swapWorkflow(ctx context.Context, tx *entities.TransactionEntity, event request.TransactionMessage) error {
@@ -369,15 +354,12 @@ func (s *transactionService) swapWorkflow(ctx context.Context, tx *entities.Tran
 		return s.publishBlockchainTransaction(tx)
 	case string(entities.StatusSolanaSuccess):
 		// For SWAP, success from blockchain means the transaction is complete
-		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusCompleted)); err != nil {
-			return err
-		}
-	case string(entities.StatusSolanaFailed), string(entities.StatusBalanceFailed), string(entities.StatusPaymentFailed):
-		if err := s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusFailed)); err != nil {
-			return err
-		}
+		return s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusCompleted))
+	case string(entities.StatusSolanaFailed), string(entities.StatusBalanceFailed), string(entities.StatusPaymentFailed), string(entities.StatusFailed):
+		return s.updateStatusAndNotify(ctx, tx.TransactionUUID.String(), string(entities.StatusFailed))
+	default:
+		return fmt.Errorf("unhandled transaction status in swap workflow: %s", event.Status)
 	}
-	return nil
 }
 
 func (s *transactionService) updateStatusAndNotify(ctx context.Context, txID string, status string) error {
@@ -423,7 +405,7 @@ func (s *transactionService) publishBlockchainTransaction(tx *entities.Transacti
 		return entities.NewAppError(entities.ErrTypeBadRequest, "missing on-chain transaction payload", nil)
 	}
 
-	cfg := config.LoadConfig()
+	cfg := s.cfg
 
 	msg := models.SolanaTxMessage{
 		TxID:     tx.TransactionUUID.String(),
@@ -449,7 +431,7 @@ func (s *transactionService) publishBalanceTransaction(tx *entities.TransactionE
 		return entities.NewAppError(entities.ErrTypeInternal, errPublisherNotConfigured, nil)
 	}
 
-	cfg := config.LoadConfig()
+	cfg := s.cfg
 	msg := request.UpdateBalanceCommand{
 		AccountID:     uint(tx.AccountID),
 		TransactionID: tx.TransactionUUID.String(),
@@ -478,7 +460,7 @@ func (s *transactionService) publishPaymentTransaction(tx *entities.TransactionE
 		return entities.NewAppError(entities.ErrTypeBadRequest, "missing off-chain transaction payload", nil)
 	}
 
-	cfg := config.LoadConfig()
+	cfg := s.cfg
 	msg := request.RequestPaymentQueue{
 		TransactionID: string(tx.TransactionUUID.String()),
 		Amount:        int64(tx.THBAmount),

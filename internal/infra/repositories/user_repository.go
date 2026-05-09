@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/Narutchai01/solpay-core-service/internal/core/ports"
@@ -24,6 +25,20 @@ func (r *gormUserRepository) CreateUser(user *entities.User) error {
 func (r *gormUserRepository) GetUserByIDCard(idCard string) (*entities.User, error) {
 	var user entities.User
 	if err := r.db.Where("id_card = ?", idCard).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, entities.ErrNotFound
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *gormUserRepository) GetUserByAccountID(accountID uint) (*entities.User, error) {
+	var user entities.User
+	if err := r.db.Where("account_id = ?", accountID).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, entities.ErrNotFound
+		}
 		return nil, err
 	}
 	return &user, nil

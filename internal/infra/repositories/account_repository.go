@@ -50,7 +50,7 @@ func (r *gormAccountRepository) CountAccounts() (int64, error) {
 
 func (r *gormAccountRepository) GetAccountByID(accountID int) (*entities.AccountEntity, error) {
 	var account entities.AccountEntity
-	if err := r.db.First(&account, accountID).Error; err != nil {
+	if err := r.db.Preload("User").First(&account, accountID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, entities.ErrNotFound
 		}
