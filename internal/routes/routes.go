@@ -25,4 +25,5 @@ func RoutesConfig(app *fiber.App, db *gorm.DB, channel *amqp.Channel, cfg *confi
 	NewCategoryRouteConfig(v1.Group("/categories"), db).Setup()
 	NewUserRouteConfig(v1.Group("/users"), db, cfg).Setup()
 	NewSwapRouteConfig(v1.Group("/swaps"), db, channel).Setup()
+	NewExchangeRateRouteConfig(v1.Group("/exchange-rates"), cfg).Setup()
 }
