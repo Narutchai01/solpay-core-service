@@ -34,6 +34,7 @@ type Config struct {
 	SWAP_SERVICE_URL               string
 	SLIP_INFORMATION               string
 	ALLOW_ORIGIN                   string
+	EXCHANGE_RATE_URL              string
 }
 
 func GetEnv(key string, fallback ...string) string {
@@ -79,5 +80,6 @@ func LoadConfig() *Config {
 		SWAP_SERVICE_URL:               GetEnv("SWAP_SERVICE_URL", "http://localhost:8081"),
 		SLIP_INFORMATION:               GetEnv("SLIP_INFORMATION", "http://localhost:3000/transformation"),
 		ALLOW_ORIGIN:                   GetEnv("ALLOW_ORIGIN", "http://localhost:3000"),
+		EXCHANGE_RATE_URL:              GetEnv("EXCHANGE_RATE_URL", "https://api.bitkub.com/api/v3/market/ticker"),
 	}
 }
