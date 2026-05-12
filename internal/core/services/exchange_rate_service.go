@@ -6,7 +6,7 @@ import (
 )
 
 type ExchangeRateService interface {
-	GetExchangeRate(symbol string) (*[]entities.ExchangeRate, error)
+	GetExchangeRate(symbol string) (*entities.ExchangeRate, error)
 }
 
 type exchangeRateService struct {
@@ -19,6 +19,13 @@ func NewExchangeRateService(repo ports.ExchangeRepository) ExchangeRateService {
 	}
 }
 
-func (s *exchangeRateService) GetExchangeRate(symbol string) (*[]entities.ExchangeRate, error) {
-	return s.repo.GetExchangeRate(symbol)
+func (s *exchangeRateService) GetExchangeRate(symbol string) (*entities.ExchangeRate, error) {
+	rate, err := s.repo.GetExchangeRate(symbol)
+	if err != nil {
+		return nil, err
+	}
+	if len(*rate) == 0 {
+		return nil, nil
+	}
+	return &(*rate)[0], nil
 }
