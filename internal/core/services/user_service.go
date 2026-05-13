@@ -52,29 +52,13 @@ func (s *userService) CreateUser(req *request.CreateUserRequest, accountID uint)
 
 	// 1. Pre-check for duplicate IDCard or AccountID
 	existingByID, errID := s.userRepo.GetUserByIDCard(req.IDCard)
-	existingByAcc, errAcc := s.userRepo.GetUserByAccountID(accountID)
-
-	var targetUser *entities.User
-
-	if errID == nil {
-		// IDCard exists. Check status.
-		if existingByID.Status != string(entities.UserStatusRejected) {
-			return nil, entities.NewAppError(entities.ErrTypeConflict, "ID Card already registered and is not rejected", entities.ErrConflict)
-		}
-		targetUser = existingByID
+	if errID == nil && existingByID.Status != string(entities.UserStatusRejected) {
+		return nil, entities.NewAppError(entities.ErrTypeConflict, "ID Card already registered and is not rejected", entities.ErrConflict)
 	}
 
-	if errAcc == nil {
-		// Account already has a KYC record. Check status.
-		if existingByAcc.Status != string(entities.UserStatusRejected) {
-			return nil, entities.NewAppError(entities.ErrTypeConflict, "Account already has a KYC record that is not rejected", entities.ErrConflict)
-		}
-		// If both exist and are different records, we prefer the one with matching IDCard if possible,
-		// but usually an account shouldn't have multiple records.
-		// For simplicity, if account has a rejected record, we reuse/update it.
-		if targetUser == nil {
-			targetUser = existingByAcc
-		}
+	existingByAcc, errAcc := s.userRepo.GetUserByAccountID(accountID)
+	if errAcc == nil && existingByAcc.Status != string(entities.UserStatusRejected) {
+		return nil, entities.NewAppError(entities.ErrTypeConflict, "Account already has a KYC record that is not rejected", entities.ErrConflict)
 	}
 
 	// 2. Upload images only if we are clear to proceed
@@ -126,38 +110,32 @@ func (s *userService) CreateUser(req *request.CreateUserRequest, accountID uint)
 		return nil, entities.NewAppError(entities.ErrTypeInternal, "failed to upload face_image", err)
 	}
 
-	// 3. Update or Create
-	if targetUser != nil {
-		// Update existing rejected record
-		targetUser.IDCard = req.IDCard
-		targetUser.FirstName = req.FirstName
-		targetUser.LastName = req.LastName
-		targetUser.AccountID = accountID
-		targetUser.FrontCardURL = frontCardURL
-		targetUser.BackCardURL = backCardURL
-		targetUser.FaceURL = faceCardURL
-		targetUser.BirthDate = req.BirthDate
-		targetUser.ExpireDate = req.ExpireDate
-		targetUser.Status = string(entities.UserStatusPending)
-
-		if err := s.userRepo.UpdateUser(targetUser); err != nil {
-			return nil, err
+	// 3. Create (which handles Upsert in the repository)
+	var user *entities.User
+	if errAcc == nil && existingByAcc.Status == string(entities.UserStatusRejected) {
+		user = existingByAcc
+		user.IDCard = req.IDCard
+		user.FirstName = req.FirstName
+		user.LastName = req.LastName
+		user.FrontCardURL = frontCardURL
+		user.BackCardURL = backCardURL
+		user.FaceURL = faceCardURL
+		user.BirthDate = req.BirthDate
+		user.Status = string(entities.UserStatusPending)
+		user.ExpireDate = req.ExpireDate
+	} else {
+		user = &entities.User{
+			IDCard:       req.IDCard,
+			FirstName:    req.FirstName,
+			LastName:     req.LastName,
+			AccountID:    accountID,
+			FrontCardURL: frontCardURL,
+			BackCardURL:  backCardURL,
+			FaceURL:      faceCardURL,
+			BirthDate:    req.BirthDate,
+			Status:       string(entities.UserStatusPending),
+			ExpireDate:   req.ExpireDate,
 		}
-		return response.FormatUserResponse(targetUser), nil
-	}
-
-	// Create new record
-	user := &entities.User{
-		IDCard:       req.IDCard,
-		FirstName:    req.FirstName,
-		LastName:     req.LastName,
-		AccountID:    accountID,
-		FrontCardURL: frontCardURL,
-		BackCardURL:  backCardURL,
-		FaceURL:      faceCardURL,
-		BirthDate:    req.BirthDate,
-		Status:       string(entities.UserStatusPending),
-		ExpireDate:   req.ExpireDate,
 	}
 
 	if err := s.userRepo.CreateUser(user); err != nil {

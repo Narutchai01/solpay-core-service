@@ -19,6 +19,11 @@ type gormUserRepository struct {
 }
 
 func (r *gormUserRepository) CreateUser(user *entities.User) error {
+	var existing entities.User
+	if err := r.db.Where("account_id = ?", user.AccountID).First(&existing).Error; err == nil {
+		user.ID = existing.ID
+		return r.db.Save(user).Error
+	}
 	return r.db.Create(user).Error
 }
 
