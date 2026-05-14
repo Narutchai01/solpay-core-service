@@ -35,7 +35,6 @@ sequenceDiagram
     Orch->>+Solana: Publish to SOLANA_WORK_QUEUE
     Solana->>Solana: Handle On-Chain Verification
     Solana->>Orch: Publish Status Update (SOLANA_SUCCESS)
-    Solana->>Orch: ""
 
     Orch->>+DB: Update Tx Status to SOLANA_SUCCESS
     DB-->>-Orch: DB Updated
@@ -43,7 +42,6 @@ sequenceDiagram
     Balance->>+DB: Add to User Balance
     DB-->>-Balance: Balance Updated
     Balance->>Orch: Publish Status Update (BALANCE_UPDATED)
-    Balance->>Orch: ""
 
     Orch->>+DB: Update Tx Status to COMPLETED
     DB-->>-Orch: Success
@@ -54,7 +52,7 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    title Offchain Flow
+    title Offchain Flow (Withdrawal)
     actor User
     participant API as Handler & Service
     participant DB as Postgres DB
@@ -78,14 +76,12 @@ sequenceDiagram
     Balance->>+DB: Deduct from User Balance
     DB-->>-Balance: Balance Updated
     Balance->>Orch: Publish Status Update (BALANCE_UPDATED)
-    Balance->>Orch: ""
 
     Orch->>+DB: Update Tx Status to BALANCE_UPDATED
     DB-->>-Orch: DB Updated
     Orch->>+Payment: Publish to PAYMENT_QUEUE
     Payment->>Payment: Process Payment (PromptPay/Omise)
     Payment->>Orch: Publish Status Update (PAYMENT_SUCCESS)
-    Payment->>Orch: ""
 
     Orch->>+DB: Get Transaction
     DB-->>-Orch: Tx Entity

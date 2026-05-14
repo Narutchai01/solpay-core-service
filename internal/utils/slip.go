@@ -103,8 +103,8 @@ func GetSlipOFFCHAINInformation(data SlipOffchain) ([]byte, error) {
 	dc.DrawStringAnchored(fmt.Sprintf("%.2f THB", data.Amount), float64(dc.Width()-40), 370, 1.0, 0.5)
 
 	// 4. สร้าง QR Code
-	qrData := fmt.Sprintf(cfg.SLIP_INFORMATION, data.TransactionID) // ข้อมูล PromptPay หรือ URL
-	qrBytes, err := qrcode.Encode(qrData, qrcode.Medium, 72)        // 180 คือขนาดพิกเซล กว้างxยาว
+	qrData := fmt.Sprintf("%s/%s", cfg.SLIP_INFORMATION, data.TransactionID) // ข้อมูล PromptPay หรือ URL
+	qrBytes, err := qrcode.Encode(qrData, qrcode.Medium, 72)                 // 180 คือขนาดพิกเซล กว้างxยาว
 	if err != nil {
 		return nil, fmt.Errorf("cannot generate QR: %w", err)
 	}
@@ -198,8 +198,8 @@ func GetSlipOnChain(data SlipOnchain) ([]byte, error) {
 	dc.DrawStringAnchored(fmt.Sprintf("%.2f USDT", data.FreeAmount), float64(dc.Width()-11), 445, 1.0, 0.5)
 
 	// 4. สร้าง QR Code
-	qrData := fmt.Sprintf(cfg.SLIP_INFORMATION, data.TransactionID) // ข้อมูล PromptPay หรือ URL
-	qrBytes, err := qrcode.Encode(qrData, qrcode.Medium, 72)        // 180 คือขนาดพิกเซล กว้างxยาว
+	qrData := fmt.Sprintf("%s/%s", cfg.SLIP_INFORMATION, data.TransactionID) // ข้อมูล PromptPay หรือ URL
+	qrBytes, err := qrcode.Encode(qrData, qrcode.Medium, 72)                 // 180 คือขนาดพิกเซล กว้างxยาว
 	if err != nil {
 		return nil, fmt.Errorf("cannot generate QR: %w", err)
 	}
