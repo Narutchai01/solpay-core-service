@@ -105,7 +105,9 @@ func (r *transactionRepository) GetTransactionByUUID(txUUID uuid.UUID) (*entitie
 func (r *transactionRepository) CountTransactions(query request.TransactionQuery, accountID *uint) (int64, error) {
 	var total int64
 
-	q := r.db.Model(&entities.TransactionEntity{}).Where("status = ?", entities.StatusCompleted)
+	q := r.db.Model(&entities.TransactionEntity{}).
+		Where("status IN ?", []string{string(entities.StatusCompleted), string(entities.StatusFailed)}).
+		Where("transaction_type != ?", string(entities.SWAP))
 
 	if accountID != nil {
 		q = q.Where("account_id = ?", *accountID)
@@ -123,7 +125,9 @@ func (r *transactionRepository) CountTransactions(query request.TransactionQuery
 func (r *transactionRepository) GetTransactions(query request.TransactionQuery, accountID *uint) ([]entities.TransactionEntity, error) {
 	var transactions []entities.TransactionEntity
 
-	q := r.db.Model(&entities.TransactionEntity{}).Where("status = ?", entities.StatusCompleted)
+	q := r.db.Model(&entities.TransactionEntity{}).
+		Where("status IN ?", []string{string(entities.StatusCompleted), string(entities.StatusFailed)}).
+		Where("transaction_type != ?", string(entities.SWAP))
 
 	if accountID != nil {
 		q = q.Where("account_id = ?", *accountID)

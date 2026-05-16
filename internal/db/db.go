@@ -77,7 +77,7 @@ func seedCategories(db *gorm.DB) error {
 		{ID: 1, Name: "Others"},
 		{ID: 2, Name: "Food/Drink"},
 		{ID: 3, Name: "Shopping"},
-		{ID: 4, Name: "invest"},
+		{ID: 4, Name: "Invest"},
 	}
 
 	if err := db.Clauses(clause.OnConflict{
