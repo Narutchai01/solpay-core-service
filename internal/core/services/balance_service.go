@@ -103,7 +103,7 @@ func (s *balanceService) Deposit(data []byte) error {
 	}
 
 	// Retrieve current balance
-	balance, err := s.balanceRepo.GetBalanceByID(int(cmd.AccountID))
+	balance, err := s.balanceRepo.GetBalanceByAccountID(cmd.AccountID)
 	if err != nil {
 		s.publishBalanceResult(cfg, cmd.TransactionID, string(entities.StatusBalanceFailed))
 		return entities.NewAppError(entities.ErrTypeInternal, "failed to get balance", err)
@@ -131,7 +131,7 @@ func (s *balanceService) WithDraw(data []byte) error {
 	}
 
 	// Retrieve current balance
-	balance, err := s.balanceRepo.GetBalanceByID(int(cmd.AccountID))
+	balance, err := s.balanceRepo.GetBalanceByAccountID(cmd.AccountID)
 	if err != nil {
 		s.publishBalanceResult(cfg, cmd.TransactionID, string(entities.StatusBalanceFailed))
 		return entities.NewAppError(entities.ErrTypeInternal, "failed to get balance", err)

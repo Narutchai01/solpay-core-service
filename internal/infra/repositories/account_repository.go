@@ -72,7 +72,7 @@ func (r *gormAccountRepository) GetAccountByPublicAddress(address string) (*enti
 
 func (r *gormAccountRepository) UpdateAccount(txCtx context.Context, id int, data *entities.AccountEntity) error {
 	tx := db.GetTx(txCtx, r.db)
-	if err := tx.Model(&entities.AccountEntity{}).Where("id = ?", id).Updates(data).Error; err != nil {
+	if err := tx.Model(&entities.AccountEntity{}).Where("id = ?", id).Select("*").Updates(data).Error; err != nil {
 		return err
 	}
 	return nil
