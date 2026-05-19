@@ -144,7 +144,7 @@ func GetSlipOnChain(data SlipOnchain) ([]byte, error) {
 
 	cfg := config.LoadConfig()
 	// 1. โหลดรูป Template พื้นหลัง
-	templateURL := "https://cbsievyfzgizotkepdle.supabase.co/storage/v1/object/public/masterdata/template_onchain.png" // Mock data for onchain template
+	templateURL := "https://cbsievyfzgizotkepdle.supabase.co/storage/v1/object/public/masterdata/usdc_slip.png" // Mock data for onchain template
 	im, err := downloadImage(templateURL)
 	if err != nil {
 		// Fallback to offchain URL if onchain fails
