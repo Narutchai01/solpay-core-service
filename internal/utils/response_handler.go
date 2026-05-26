@@ -35,18 +35,20 @@ func handleError(c *fiber.Ctx, err error) error {
 		slog.Error("Unknown Error", "error", err)
 	}
 
-	return c.Status(code).JSON(response.FormaterResponseDTO(code, msg, nil, msg))
+	return c.Status(code).JSON(response.FormatResponseDTO(code, msg, nil, msg))
 }
 
-func handleSuccess(c *fiber.Ctx, status int, msg string, data interface{}) error {
+func handleSuccess(c *fiber.Ctx, status int, msg string, data any) error {
 	slog.Info(msg)
-	return c.Status(status).JSON(response.FormaterResponseDTO(status, msg, data, nil))
+	return c.Status(status).JSON(response.FormatResponseDTO(status, msg, data, nil))
 }
 
-func HandleResponse(c *fiber.Ctx, data interface{}, err error, message ...string) error {
+// HandleResponse is a unified response helper that delegates to error or success handling.
+func HandleResponse(c *fiber.Ctx, data any, err error, message ...string) error {
 	if err != nil {
 		return handleError(c, err)
 	}
+
 	code := fiber.StatusOK
 	if c.Method() == fiber.MethodPost {
 		code = fiber.StatusCreated
@@ -56,6 +58,6 @@ func HandleResponse(c *fiber.Ctx, data interface{}, err error, message ...string
 	if len(message) > 0 && message[0] != "" {
 		msg = message[0]
 	}
-	return handleSuccess(c, code, msg, data)
 
+	return handleSuccess(c, code, msg, data)
 }

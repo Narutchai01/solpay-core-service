@@ -15,7 +15,7 @@ FROM base AS dev
 # Copy โค้ดทั้งหมดเข้าไป
 COPY . .
 # สั่งรัน Air เป็นหลัก
-CMD ["go" , "run" , "cmd/main.go"] 
+CMD ["go" , "run" , "cmd/main.go"]
 
 # --- 3. Builder Stage (เตรียม Build สำหรับ Prod) ---
 FROM base AS builder
@@ -32,5 +32,4 @@ WORKDIR /app
 # Copy เฉพาะไฟล์ Binary จาก Builder มา
 COPY --from=builder /app/server .
 
-EXPOSE 8080
 CMD ["./server"]

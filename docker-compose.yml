@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   database:
-    container_name: solpayg-postgres
+    container_name: solpay-postgres
     image: postgres:18
     environment:
       POSTGRES_USER: ${DB_USER}
@@ -17,6 +17,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - solpay-network
 
   solpay-core-service:
     container_name: solpay-core-service
@@ -31,25 +33,41 @@ services:
       database:
         condition: service_healthy
     environment:
-      DB_HOST: database
+      DB_HOST: solpay-postgres
       DB_PORT: 5432
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: ${DB_NAME}
       APP_PORT: ${APP_PORT}
-    develop:
-      watch:
-        - action: sync
-          path: ./cmd
-          target: /app/cmd
-        - action: sync
-          path: ./internal
-          target: /app/internal
-        - action: sync
-          path: ./config # (ถ้ามี)
-          target: /app/config
+      MQ_HOST: solpay-rabbitmq
+      MQ_PORT: ${MQ_PORT}
+      MQ_USER: ${MQ_USER}
+      MQ_PASSWORD: ${MQ_PASSWORD}
+      MQ_VHOST: ${MQ_VHOST}
+      MQ_URL: amqp://${MQ_USER}:${MQ_PASSWORD}@solpay-rabbitmq:${MQ_PORT}/${MQ_VHOST}
+      SWAP_SERVICE_PORT: ${SWAP_SERVICE_PORT}
+      SWAP_SERVICE_URL: http://solpay-swap-service:${SWAP_SERVICE_PORT}/api/v1
+    networks:
+      - solpay-network
 
-        - action: rebuild
-          path: ./go.mod
-        - action: rebuild
-          path: ./go.sum
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: solpay-rabbitmq
+    ports:
+      - "5672:5672" # พอร์ตสำหรับเชื่อมต่อรับ-ส่งข้อมูล (AMQP)
+      - "15672:15672" # พอร์ตสำหรับหน้า Dashboard (RabbitMQ Management)
+    environment:
+      RABBITMQ_DEFAULT_USER: ${MQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${MQ_PASSWORD:-guest}
+      RABBITMQ_DEFAULT_VHOST: ${MQ_VHOST:-/}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - solpay-network
+
+networks:
+  solpay-network:
+    driver: bridge

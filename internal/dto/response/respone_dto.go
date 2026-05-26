@@ -1,13 +1,15 @@
 package response
 
+// ResponseModel is the standard API response envelope.
 type ResponseModel struct {
-	Code    int         `json:"code"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data,omitempty"`
-	Error   interface{} `json:"error"`
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Data    any    `json:"data,omitempty"`
+	Error   any    `json:"error"`
 }
 
-func FormaterResponseDTO(code int, message string, data interface{}, err interface{}) *ResponseModel {
+// FormatResponseDTO creates a standard API response.
+func FormatResponseDTO(code int, message string, data any, err any) *ResponseModel {
 	return &ResponseModel{
 		Code:    code,
 		Message: message,
@@ -16,13 +18,15 @@ func FormaterResponseDTO(code int, message string, data interface{}, err interfa
 	}
 }
 
+// PaginationResponseDTO wraps a paginated list response.
 type PaginationResponseDTO struct {
-	TotalItems  int         `json:"total_items"`
-	CurrentPage int         `json:"current_page"`
-	Items       interface{} `json:"items"`
+	TotalItems  int `json:"total_items"`
+	CurrentPage int `json:"current_page"`
+	Items       any `json:"items"`
 }
 
-func FormaterPaginationResponseDTO(totalItems int, currentPage int, items interface{}) *PaginationResponseDTO {
+// FormatPaginationResponseDTO creates a paginated response.
+func FormatPaginationResponseDTO(totalItems int, currentPage int, items any) *PaginationResponseDTO {
 	return &PaginationResponseDTO{
 		TotalItems:  totalItems,
 		CurrentPage: currentPage,
